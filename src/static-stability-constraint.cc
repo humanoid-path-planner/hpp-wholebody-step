@@ -21,8 +21,9 @@
 #include <hpp/model/joint.hh>
 #include <hpp/core/config-projector.hh>
 #include <hpp/constraints/orientation.hh>
-#include <hpp/constraints/relative-orientation.hh>
 #include <hpp/constraints/position.hh>
+#include <hpp/constraints/relative-com.hh>
+#include <hpp/constraints/relative-orientation.hh>
 #include <hpp/constraints/relative-position.hh>
 
 #include <hpp/wholebody-step/static-stability-constraint.hh>
@@ -30,12 +31,14 @@
 namespace hpp {
   namespace wholebodyStep {
     using hpp::constraints::Orientation;
-    using hpp::constraints::RelativeOrientation;
-    using hpp::constraints::Position;
-    using hpp::constraints::RelativePosition;
     using hpp::constraints::OrientationPtr_t;
-    using hpp::constraints::RelativeOrientationPtr_t;
+    using hpp::constraints::Position;
     using hpp::constraints::PositionPtr_t;
+    using hpp::constraints::RelativeOrientation;
+    using hpp::constraints::RelativeComPtr_t;
+    using hpp::constraints::RelativeCom;
+    using hpp::constraints::RelativeOrientationPtr_t;
+    using hpp::constraints::RelativePosition;
     using hpp::constraints::RelativePositionPtr_t;
 
     ConfigProjectorPtr_t
@@ -50,10 +53,15 @@ namespace hpp {
       JointPtr_t joint2 = robot->getRightAnkle ();
       const matrix4d& M1 = joint1->currentTransformation ();
       const matrix4d& M2 = joint2->currentTransformation ();
-
+      const vector3d& x = robot->positionCenterOfMass ();
       ConfigProjectorPtr_t configProjector
 	(ConfigProjector::create (robot, "Sliding static stability",
 				  errorThreshold, maxNumberofIterations));
+      // position of center of mass in left ankle frame
+      vector3d xloc = M1.topLeftCorner <3,3>().transpose ()*
+	(x - M1.topRightCorner <3,1> ());
+      configProjector->addConstraint
+	(RelativeCom::create (robot, joint1, xloc));
       // Relative orientation of the feet
       matrix3d reference = M1.topLeftCorner <3,3> ().transpose ()*
 	M2.topLeftCorner <3,3> ();
