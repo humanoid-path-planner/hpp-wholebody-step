@@ -49,31 +49,30 @@ namespace hpp {
     {
       robot->currentConfiguration (configuration);
       robot->computeForwardKinematics ();
-      JointPtr_t joint1 = robot->getLeftAnkle ();
-      JointPtr_t joint2 = robot->getRightAnkle ();
-      const matrix4d& M1 = joint1->currentTransformation ();
-      const matrix4d& M2 = joint2->currentTransformation ();
-      const vector3d& x = robot->positionCenterOfMass ();
+      JointPtr_t joint1 = robot->leftAnkle ();
+      JointPtr_t joint2 = robot->rightAnkle ();
+      const Transform3f& M1 = joint1->currentTransformation ();
+      const Transform3f& M2 = joint2->currentTransformation ();
+      const vector3_t& x = robot->positionCenterOfMass ();
       ConfigProjectorPtr_t configProjector
 	(ConfigProjector::create (robot, "Sliding static stability",
 				  errorThreshold, maxNumberofIterations));
       // position of center of mass in left ankle frame
-      vector3d xloc = M1.topLeftCorner <3,3>().transpose ()*
-	(x - M1.topRightCorner <3,1> ());
+      matrix3_t R1T (M1.getRotation ()); R1T.transpose ();
+      vector3_t xloc = R1T * (x - M1.getTranslation ());
       configProjector->addConstraint
 	(RelativeCom::create (robot, joint1, xloc));
       // Relative orientation of the feet
-      matrix3d reference = M1.topLeftCorner <3,3> ().transpose ()*
-	M2.topLeftCorner <3,3> ();
+      matrix3_t reference = R1T * M2.getRotation ();
       configProjector->addConstraint
 	(RelativeOrientation::create (robot, joint1, joint2, reference));
       // Relative position of the feet
-      vector3d local1; local1.setZero ();
-      vector3d global1 = M1.topRightCorner <3,1> ();
+      vector3_t local1; local1.setZero ();
+      vector3_t global1 = M1.getTranslation ();
       // global1 = R2 local2 + t2
       // local2  = R2^T (global1 - t2)
-      vector3d local2 = M2.topLeftCorner <3,3> ().transpose () *
-	(global1 - M2.topRightCorner <3,1> ());
+      matrix3_t R2T (M2.getRotation ()); R2T.transpose ();
+      vector3_t local2 = R2T * (global1 - M2.getTranslation ());
       configProjector->addConstraint
 	(RelativePosition::create (robot, joint1, joint2, local1, local2));
       // Orientation of the left foot
@@ -81,10 +80,10 @@ namespace hpp {
       configProjector->addConstraint
 	(Orientation::create (robot, joint1, reference, true));
       // Position of the left foot
-      vector3d zero; zero.setZero ();
-      matrix3d I3; I3.setIdentity ();
+      vector3_t zero; zero.setZero ();
+      matrix3_t I3; I3.setIdentity ();
       configProjector->addConstraint
-	(Position::create (robot, joint1, zero, M1.topRightCorner <3,1> (), I3,
+	(Position::create (robot, joint1, zero, M1.getTranslation (), I3,
 			   boost::assign::list_of (false)(false)(true)));
       return configProjector;
     }

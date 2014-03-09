@@ -32,6 +32,11 @@ namespace hpp {
     typedef model::HumanoidRobotShPtr HumanoidRobotPtr_t;
     typedef core::value_type value_type;
     typedef core::size_type size_type;
+
+    typedef model::Transform3f Transform3f;
+    typedef model::matrix3_t matrix3_t;
+    typedef model::vector3_t vector3_t;
+    typedef model::vector_t vector_t;
   } // wholeBodyStepPlanner
 } // namespace hpp
 #endif // HPP_WHOLEBODY_STEP_FWD_HH
