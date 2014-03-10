@@ -28,7 +28,7 @@ namespace hpp {
     typedef core::ConfigProjectorPtr_t ConfigProjectorPtr_t;
     typedef core::ConfigProjector ConfigProjector;
     typedef core::Configuration_t Configuration_t;
-    typedef core::DifferentiableFunction_t DifferentiableFunction_t;
+    typedef core::DifferentiableFunction DifferentiableFunction_t;
     typedef model::HumanoidRobotShPtr HumanoidRobotPtr_t;
     typedef core::value_type value_type;
     typedef core::size_type size_type;
