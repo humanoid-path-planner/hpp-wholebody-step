@@ -40,7 +40,7 @@ ENDIF()
 
 SETUP_PROJECT()
 
-ADD_REQUIRED_DEPENDENCY("hpp-constraints")
+ADD_REQUIRED_DEPENDENCY("hpp-constraints >= 3")
 
 # Add dependency toward hpp-wholebody-step library in pkg-config file.
 PKG_CONFIG_APPEND_LIBS("hpp-wholebody-step")
