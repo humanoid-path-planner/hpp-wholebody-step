@@ -43,7 +43,7 @@ namespace hpp {
 
     ConfigProjectorPtr_t
     createSlidingStabilityConstraint (const HumanoidRobotPtr_t& robot,
-				      const Configuration_t& configuration,
+				      ConfigurationIn_t configuration,
 				      value_type errorThreshold,
 				      size_type maxNumberofIterations)
     {
