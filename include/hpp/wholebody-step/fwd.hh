@@ -30,7 +30,6 @@ namespace hpp {
     typedef model::Configuration_t Configuration_t;
     typedef model::ConfigurationIn_t ConfigurationIn_t;
     typedef model::ConfigurationOut_t ConfigurationOut_t;
-    typedef core::DifferentiableFunction DifferentiableFunction_t;
     typedef model::HumanoidRobotPtr_t HumanoidRobotPtr_t;
     typedef core::value_type value_type;
     typedef core::size_type size_type;
