@@ -41,11 +41,11 @@ namespace hpp {
     using hpp::constraints::RelativePosition;
     using hpp::constraints::RelativePositionPtr_t;
 
-    void addSlidingStabilityConstraint
-    (const ConfigProjectorPtr_t& configProjector,
-     const DevicePtr_t& robot, const JointPtr_t& leftAnkle,
+    std::vector <DifferentiableFunctionPtr_t> createSlidingStabilityConstraint
+    (const DevicePtr_t& robot, const JointPtr_t& leftAnkle,
      const JointPtr_t& rightAnkle, ConfigurationIn_t configuration)
     {
+      std::vector <DifferentiableFunctionPtr_t> result;
       robot->currentConfiguration (configuration);
       robot->computeForwardKinematics ();
       JointPtr_t joint1 = leftAnkle;
@@ -56,12 +56,11 @@ namespace hpp {
       // position of center of mass in left ankle frame
       matrix3_t R1T (M1.getRotation ()); R1T.transpose ();
       vector3_t xloc = R1T * (x - M1.getTranslation ());
-      configProjector->addConstraint
-	(RelativeCom::create (robot, joint1, xloc));
+      result.push_back (RelativeCom::create (robot, joint1, xloc));
       // Relative orientation of the feet
       matrix3_t reference = R1T * M2.getRotation ();
-      configProjector->addConstraint
-	(RelativeOrientation::create (robot, joint1, joint2, reference));
+      result.push_back(RelativeOrientation::create
+		       (robot, joint1, joint2, reference));
       // Relative position of the feet
       vector3_t local1; local1.setZero ();
       vector3_t global1 = M1.getTranslation ();
@@ -69,18 +68,19 @@ namespace hpp {
       // local2  = R2^T (global1 - t2)
       matrix3_t R2T (M2.getRotation ()); R2T.transpose ();
       vector3_t local2 = R2T * (global1 - M2.getTranslation ());
-      configProjector->addConstraint
-	(RelativePosition::create (robot, joint1, joint2, local1, local2));
+      result.push_back (RelativePosition::create
+			(robot, joint1, joint2, local1, local2));
       // Orientation of the left foot
       reference.setIdentity ();
-      configProjector->addConstraint
+      result.push_back
 	(Orientation::create (robot, joint1, reference, true));
       // Position of the left foot
       vector3_t zero; zero.setZero ();
       matrix3_t I3; I3.setIdentity ();
-      configProjector->addConstraint
-	(Position::create (robot, joint1, zero, M1.getTranslation (), I3,
-			   boost::assign::list_of (false)(false)(true)));
+      result.push_back (Position::create
+			(robot, joint1, zero, M1.getTranslation (), I3,
+			 boost::assign::list_of (false)(false)(true)));
+      return result;
     }
   } // namespace wholebodyStep
 } // namespace hpp

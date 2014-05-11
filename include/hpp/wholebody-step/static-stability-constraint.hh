@@ -26,20 +26,23 @@
 
 namespace hpp {
   namespace wholebodyStep {
-    /// Add quasi-static stability constraint to a configuration projector
-    /// \param configProjector configuration projector to which the
-    ///        numerical constraints are added,
+    /// Create quasi-static stability constraints
     /// \param robot the robot,
     /// \param leftAnkle left ankle joint,
     /// \param rightAnkle right ankle joint,
     /// \param configuration the configuration of the robot satisfying
     ///        the constraint,
-    /// The constraint makes the feet of the robot slide on a horizontal ground
+    /// The constraints make the feet of the robot slide on a horizontal ground
     /// and the center of mass project at a constant position with respect to
-    /// the feet.
-    void addSlidingStabilityConstraint
-    (const ConfigProjectorPtr_t& configProjector,
-     const DevicePtr_t& robot, const JointPtr_t& leftAnkle, 
+    /// the feet. Five constraints are returned:
+    /// \li relative position of the center of mass in the left ankle frame
+    ///     (dimension 3),
+    /// \li relative orientation of the feet (dimension 3),
+    /// \li relative position of the feet (dimension 3),
+    /// \li orientation of the left foot (dimension 2),
+    /// \li position of the left foot (dimension 1).
+    std::vector <DifferentiableFunctionPtr_t> createSlidingStabilityConstraint
+    (const DevicePtr_t& robot, const JointPtr_t& leftAnkle, 
      const JointPtr_t& rightAnkle, ConfigurationIn_t configuration);
   } // namespace wholebodyStep
 } // namespace hpp
