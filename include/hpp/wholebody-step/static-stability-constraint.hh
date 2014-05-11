@@ -26,22 +26,21 @@
 
 namespace hpp {
   namespace wholebodyStep {
-    /// Create quasi-static stability constraint for a humanoid robot
-    /// \param robot the humanoid robot,
+    /// Add quasi-static stability constraint to a configuration projector
+    /// \param configProjector configuration projector to which the
+    ///        numerical constraints are added,
+    /// \param robot the robot,
+    /// \param leftAnkle left ankle joint,
+    /// \param rightAnkle right ankle joint,
     /// \param configuration the configuration of the robot satisfying
     ///        the constraint,
-    /// \param errorThreshold norm threshold below which constraints are
-    ///    considered satisfied,
-    /// \param maxNumberofIterations maximal number of iterations for
-    ///    solving constraints.
     /// The constraint makes the feet of the robot slide on a horizontal ground
     /// and the center of mass project at a constant position with respect to
     /// the feet.
-    ConfigProjectorPtr_t
-    createSlidingStabilityConstraint (const HumanoidRobotPtr_t& robot,
-				      ConfigurationIn_t configuration,
-				      value_type errorThreshold,
-				      size_type maxNumberofIterations);
+    void addSlidingStabilityConstraint
+    (const ConfigProjectorPtr_t& configProjector,
+     const DevicePtr_t& robot, const JointPtr_t& leftAnkle, 
+     const JointPtr_t& rightAnkle, ConfigurationIn_t configuration);
   } // namespace wholebodyStep
 } // namespace hpp
 #endif // HPP_WHOLEBODY_STEP_STATIC_STABILITY_CONSTRAINT_HH

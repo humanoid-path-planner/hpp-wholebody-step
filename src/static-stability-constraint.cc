@@ -41,22 +41,18 @@ namespace hpp {
     using hpp::constraints::RelativePosition;
     using hpp::constraints::RelativePositionPtr_t;
 
-    ConfigProjectorPtr_t
-    createSlidingStabilityConstraint (const HumanoidRobotPtr_t& robot,
-				      ConfigurationIn_t configuration,
-				      value_type errorThreshold,
-				      size_type maxNumberofIterations)
+    void addSlidingStabilityConstraint
+    (const ConfigProjectorPtr_t& configProjector,
+     const DevicePtr_t& robot, const JointPtr_t& leftAnkle,
+     const JointPtr_t& rightAnkle, ConfigurationIn_t configuration)
     {
       robot->currentConfiguration (configuration);
       robot->computeForwardKinematics ();
-      JointPtr_t joint1 = robot->leftAnkle ();
-      JointPtr_t joint2 = robot->rightAnkle ();
+      JointPtr_t joint1 = leftAnkle;
+      JointPtr_t joint2 = rightAnkle;
       const Transform3f& M1 = joint1->currentTransformation ();
       const Transform3f& M2 = joint2->currentTransformation ();
       const vector3_t& x = robot->positionCenterOfMass ();
-      ConfigProjectorPtr_t configProjector
-	(ConfigProjector::create (robot, "Sliding static stability",
-				  errorThreshold, maxNumberofIterations));
       // position of center of mass in left ankle frame
       matrix3_t R1T (M1.getRotation ()); R1T.transpose ();
       vector3_t xloc = R1T * (x - M1.getTranslation ());
@@ -85,7 +81,6 @@ namespace hpp {
       configProjector->addConstraint
 	(Position::create (robot, joint1, zero, M1.getTranslation (), I3,
 			   boost::assign::list_of (false)(false)(true)));
-      return configProjector;
     }
   } // namespace wholebodyStep
 } // namespace hpp
