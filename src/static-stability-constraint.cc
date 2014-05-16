@@ -17,6 +17,7 @@
 // hpp-wholebody-step-planner. If not, see
 // <http://www.gnu.org/licenses/>.
 
+#include <boost/assign/list_of.hpp>
 #include <hpp/model/humanoid-robot.hh>
 #include <hpp/model/joint.hh>
 #include <hpp/core/config-projector.hh>
@@ -73,7 +74,8 @@ namespace hpp {
       // Orientation of the left foot
       reference.setIdentity ();
       result.push_back
-	(Orientation::create (robot, joint1, reference, true));
+	(Orientation::create (robot, joint1, reference, boost::assign::list_of
+			      (true)(true)(false)));
       // Position of the left foot
       vector3_t zero; zero.setZero ();
       matrix3_t I3; I3.setIdentity ();
