@@ -57,18 +57,32 @@ namespace hpp {
     (const DevicePtr_t& robot, const JointPtr_t& leftAnkle,
      const JointPtr_t& rightAnkle, ConfigurationIn_t configuration)
     {
+      CenterOfMassComputationPtr_t comc =
+        CenterOfMassComputation::create (robot);
+      comc->add (robot->rootJoint ());
+      comc->computeMass ();
+      return createSlidingStabilityConstraint
+        (robot, comc, leftAnkle, rightAnkle, configuration);
+    }
+
+    std::vector <DifferentiableFunctionPtr_t> createSlidingStabilityConstraint
+    (const DevicePtr_t& robot, const model::CenterOfMassComputationPtr_t& comc,
+     const JointPtr_t& leftAnkle, const JointPtr_t& rightAnkle,
+     ConfigurationIn_t configuration)
+    {
       std::vector <DifferentiableFunctionPtr_t> result;
       robot->currentConfiguration (configuration);
       robot->computeForwardKinematics ();
+      comc->compute (model::Device::COM);
       JointPtr_t joint1 = leftAnkle;
       JointPtr_t joint2 = rightAnkle;
       const Transform3f& M1 = joint1->currentTransformation ();
       const Transform3f& M2 = joint2->currentTransformation ();
-      const vector3_t& x = robot->positionCenterOfMass ();
+      const vector3_t& x = comc->com ();
       // position of center of mass in left ankle frame
       matrix3_t R1T (M1.getRotation ()); R1T.transpose ();
       vector3_t xloc = R1T * (x - M1.getTranslation ());
-      result.push_back (RelativeCom::create (robot, joint1, xloc));
+      result.push_back (RelativeCom::create (robot, comc, joint1, xloc));
       // Relative orientation of the feet
       matrix3_t reference = R1T * M2.getRotation ();
       result.push_back(RelativeOrientation::create
