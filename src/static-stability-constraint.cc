@@ -47,13 +47,11 @@ namespace hpp {
     using hpp::constraints::RelativePositionPtr_t;
     using hpp::constraints::ComBetweenFeet;
     using hpp::model::CenterOfMassComputation;
-    using hpp::model::CenterOfMassComputationPtr_t;
     using hpp::core::NumericalConstraint;
-    using hpp::core::NumericalConstraintPtr_t;
     using hpp::core::ComparisonType;
     using hpp::core::ComparisonTypes;
 
-    std::vector <DifferentiableFunctionPtr_t> createSlidingStabilityConstraint
+    std::vector <NumericalConstraintPtr_t> createSlidingStabilityConstraint
     (const DevicePtr_t& robot, const JointPtr_t& leftAnkle,
      const JointPtr_t& rightAnkle, ConfigurationIn_t configuration)
     {
@@ -65,12 +63,12 @@ namespace hpp {
         (robot, comc, leftAnkle, rightAnkle, configuration);
     }
 
-    std::vector <DifferentiableFunctionPtr_t> createSlidingStabilityConstraint
-    (const DevicePtr_t& robot, const model::CenterOfMassComputationPtr_t& comc,
+    std::vector <NumericalConstraintPtr_t> createSlidingStabilityConstraint
+    (const DevicePtr_t& robot, const CenterOfMassComputationPtr_t& comc,
      const JointPtr_t& leftAnkle, const JointPtr_t& rightAnkle,
      ConfigurationIn_t configuration)
     {
-      std::vector <DifferentiableFunctionPtr_t> result;
+      std::vector <NumericalConstraintPtr_t> result;
       robot->currentConfiguration (configuration);
       robot->computeForwardKinematics ();
       comc->compute (model::Device::COM);
@@ -82,11 +80,12 @@ namespace hpp {
       // position of center of mass in left ankle frame
       matrix3_t R1T (M1.getRotation ()); R1T.transpose ();
       vector3_t xloc = R1T * (x - M1.getTranslation ());
-      result.push_back (RelativeCom::create (robot, comc, joint1, xloc));
+      result.push_back (NumericalConstraint::create (RelativeCom::create
+            (robot, comc, joint1, xloc)));
       // Relative orientation of the feet
       matrix3_t reference = R1T * M2.getRotation ();
-      result.push_back(RelativeOrientation::create
-		       (robot, joint1, joint2, reference));
+      result.push_back(NumericalConstraint::create (RelativeOrientation::create
+		       (robot, joint1, joint2, reference)));
       // Relative position of the feet
       vector3_t local1; local1.setZero ();
       vector3_t global1 = M1.getTranslation ();
@@ -94,23 +93,23 @@ namespace hpp {
       // local2  = R2^T (global1 - t2)
       matrix3_t R2T (M2.getRotation ()); R2T.transpose ();
       vector3_t local2 = R2T * (global1 - M2.getTranslation ());
-      result.push_back (RelativePosition::create
-			(robot, joint1, joint2, local1, local2));
+      result.push_back (NumericalConstraint::create (RelativePosition::create
+			(robot, joint1, joint2, local1, local2)));
       // Orientation of the left foot
       reference.setIdentity ();
-      result.push_back
-	(Orientation::create (robot, joint1, reference, boost::assign::list_of
-			      (true)(true)(false)));
+      result.push_back (NumericalConstraint::create (Orientation::create
+            (robot, joint1, reference, boost::assign::list_of
+			      (true)(true)(false))));
       // Position of the left foot
       vector3_t zero; zero.setZero ();
       matrix3_t I3; I3.setIdentity ();
-      result.push_back (Position::create
+      result.push_back (NumericalConstraint::create (Position::create
 			(robot, joint1, zero, M1.getTranslation (), I3,
-			 boost::assign::list_of (false)(false)(true)));
+			 boost::assign::list_of (false)(false)(true))));
       return result;
     }
 
-    std::vector <NumericalConstraintPtr_t> createStabilityConstraint
+    std::vector <NumericalConstraintPtr_t> createAlignedCOMStabilityConstraint
     (const DevicePtr_t& robot, const CenterOfMassComputationPtr_t& comc,
      const JointPtr_t& leftAnkle, const JointPtr_t& rightAnkle,
      ConfigurationIn_t configuration)

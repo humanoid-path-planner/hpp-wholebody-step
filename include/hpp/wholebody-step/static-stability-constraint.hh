@@ -24,6 +24,7 @@
 # include <hpp/model/humanoid-robot.hh>
 # include <hpp/wholebody-step/fwd.hh>
 # include <hpp/wholebody-step/config.hh>
+# include <hpp/wholebody-step/deprecated.hh>
 
 namespace hpp {
   namespace wholebodyStep {
@@ -35,6 +36,7 @@ namespace hpp {
     /// \param rightAnkle right ankle joint,
     /// \param configuration the configuration of the robot satisfying
     ///        the constraint,
+    ///
     /// The constraints make the feet of the robot slide on a horizontal ground
     /// and the center of mass project at a constant position with respect to
     /// the feet. Five constraints are returned:
@@ -44,8 +46,11 @@ namespace hpp {
     /// \li relative position of the feet (dimension 3),
     /// \li orientation of the left foot (dimension 2),
     /// \li position of the left foot (dimension 1).
-    std::vector <DifferentiableFunctionPtr_t> createSlidingStabilityConstraint
-    (const DevicePtr_t& robot, const model::CenterOfMassComputationPtr_t& comc,
+    ///
+    /// All constraints are returned along with the
+    /// hpp::core::ComparisonType::createDefault()
+    std::vector <NumericalConstraintPtr_t> createSlidingStabilityConstraint
+    (const DevicePtr_t& robot, const CenterOfMassComputationPtr_t& comc,
      const JointPtr_t& leftAnkle, const JointPtr_t& rightAnkle,
      ConfigurationIn_t configuration);
 
@@ -54,7 +59,7 @@ namespace hpp {
     /// \param robot, leftAnkle, rightAnkle, configuration
     ///        see createSlidingStabilityConstraint(const DevicePtr_t&,
     ///         const JointPtr_t&, const JointPtr_t&, ConfigurationIn_t)
-    std::vector <DifferentiableFunctionPtr_t> createSlidingStabilityConstraint
+    std::vector <NumericalConstraintPtr_t> createSlidingStabilityConstraint
     (const DevicePtr_t& robot, const JointPtr_t& leftAnkle, 
      const JointPtr_t& rightAnkle, ConfigurationIn_t configuration);
 
@@ -73,8 +78,8 @@ namespace hpp {
     /// \li position of the right foot along z (dimension 1),
     /// \li orientation of the left foot around x and y (dimension 2),
     /// \li position of the left foot along z (dimension 1),
-    std::vector <core::NumericalConstraintPtr_t> createStabilityConstraint
-    (const DevicePtr_t& robot, const model::CenterOfMassComputationPtr_t& comc,
+    std::vector <NumericalConstraintPtr_t> createAlignedCOMStabilityConstraint
+    (const DevicePtr_t& robot, const CenterOfMassComputationPtr_t& comc,
      const JointPtr_t& leftAnkle, const JointPtr_t& rightAnkle,
      ConfigurationIn_t configuration);
   } // namespace wholebodyStep
