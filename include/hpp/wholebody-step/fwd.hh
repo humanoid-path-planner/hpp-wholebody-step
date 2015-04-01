@@ -21,6 +21,8 @@
 # define HPP_WHOLEBODY_STEP_FWD_HH
 
 # include <hpp/core/fwd.hh>
+# include <hpp/walkgen/fwd.hh>
+# include <hpp/wholebody-step/config.hh>
 
 namespace hpp {
   namespace wholebodyStep {
@@ -35,13 +37,28 @@ namespace hpp {
     typedef model::HumanoidRobotPtr_t HumanoidRobotPtr_t;
     typedef core::value_type value_type;
     typedef core::size_type size_type;
+    typedef core::Problem Problem;
+    typedef core::PathOptimizerPtr_t PathOptimizerPtr_t;
+    typedef core::PathVectorPtr_t PathVectorPtr_t;
 
     typedef core::CenterOfMassComputationPtr_t CenterOfMassComputationPtr_t;
 
+    typedef model::JointPtr_t JointPtr_t;
+    typedef model::DevicePtr_t DevicePtr_t;
+    typedef model::HumanoidRobotPtr_t HumanoidRobotPtr_t;
+    typedef model::HumanoidRobot HumanoidRobot;
     typedef model::Transform3f Transform3f;
     typedef model::matrix3_t matrix3_t;
     typedef model::vector3_t vector3_t;
     typedef model::vector_t vector_t;
-  } // wholeBodyStepPlanner
+
+    typedef walkgen::FootPrint FootPrint;
+    typedef walkgen::SplineBasedPtr_t SplineBasedPtr_t;
+    typedef walkgen::SplineBased SplineBased;
+    typedef walkgen::CubicBSplinePtr_t CubicBSplinePtr_t;
+
+    HPP_PREDEF_CLASS (SmallSteps);
+    typedef boost::shared_ptr <SmallSteps> SmallStepsPtr_t;
+  } // namespace wholebodyStep
 } // namespace hpp
 #endif // HPP_WHOLEBODY_STEP_FWD_HH

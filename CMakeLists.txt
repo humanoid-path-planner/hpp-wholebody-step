@@ -27,6 +27,7 @@ SET(PROJECT_URL "https://github.com/laas/hpp-wholebody-step")
 
 SET(${PROJECT_NAME}_HEADERS
   include/hpp/wholebody-step/fwd.hh
+  include/hpp/wholebody-step/small-steps.hh
   include/hpp/wholebody-step/static-stability-constraint.hh
 )
 
@@ -40,8 +41,9 @@ ENDIF()
 
 SETUP_PROJECT()
 
-ADD_DOC_DEPENDENCY("hpp-core >= 3")
-ADD_REQUIRED_DEPENDENCY("hpp-constraints >= 3")
+ADD_DOC_DEPENDENCY("hpp-constraints >= 3")
+ADD_REQUIRED_DEPENDENCY("hpp-core >= 3")
+ADD_REQUIRED_DEPENDENCY("hpp-walkgen >= 0.1")
 
 # Add dependency toward hpp-wholebody-step library in pkg-config file.
 PKG_CONFIG_APPEND_LIBS("hpp-wholebody-step")
