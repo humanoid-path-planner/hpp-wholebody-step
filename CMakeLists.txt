@@ -28,6 +28,8 @@ SET(PROJECT_URL "https://github.com/laas/hpp-wholebody-step")
 SET(${PROJECT_NAME}_HEADERS
   include/hpp/wholebody-step/fwd.hh
   include/hpp/wholebody-step/small-steps.hh
+  include/hpp/wholebody-step/time-dependant.hh
+  include/hpp/wholebody-step/time-dependant-path.hh
   include/hpp/wholebody-step/static-stability-constraint.hh
 )
 

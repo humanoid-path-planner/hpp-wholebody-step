@@ -17,18 +17,29 @@
 // hpp-wholebody-step-planner. If not, see
 // <http://www.gnu.org/licenses/>.
 
+#include <hpp/wholebody-step/small-steps.hh>
+
+#include <boost/assign/list_of.hpp>
+
 #include <hpp/util/debug.hh>
+
+#include <hpp/constraints/symbolic-function.hh>
 
 #include <hpp/model/humanoid-robot.hh>
 #include <hpp/model/joint.hh>
+#include <hpp/model/center-of-mass-computation.hh>
 
-#include <hpp/core/path-vector.hh>
 #include <hpp/core/problem.hh>
+#include <hpp/core/path-vector.hh>
+#include <hpp/core/straight-path.hh>
+#include <hpp/core/constraint-set.hh>
+#include <hpp/core/config-projector.hh>
 
 #include <hpp/walkgen/bspline-based.hh>
 #include <hpp/walkgen/foot-print.hh>
 
-#include <hpp/wholebody-step/small-steps.hh>
+#include <hpp/wholebody-step/time-dependant.hh>
+#include <hpp/wholebody-step/time-dependant-path.hh>
 
 namespace hpp {
   namespace wholebodyStep {
@@ -37,6 +48,8 @@ namespace hpp {
     class PiecewiseAffine
     {
     public:
+      typedef std::map <value_type, value_type> Pairs_t;
+
       value_type operator () (const value_type& t) const
       {
 	Pairs_t::const_iterator it = pairs_.lower_bound (t);
@@ -60,10 +73,47 @@ namespace hpp {
 	hppDout (info, "Adding pair: " << t << ", " << value);
 	pairs_ [t] = value;
       }
-    private:
-      typedef std::map <value_type, value_type> Pairs_t;
+
       Pairs_t pairs_;
     }; // class PiecewiseAffine
+
+    struct CubicBSplineToCom : public RightHandSideFunctor {
+      CubicBSplinePtr_t cubic_;
+      value_type h_;
+
+      CubicBSplineToCom (CubicBSplinePtr_t cubic, value_type height)
+        : cubic_ (cubic), h_ (height) {}
+
+      void operator () (vectorOut_t result, const value_type& input) const {
+        assert (cubic_);
+        (*cubic_) (result.segment <2> (0), input);
+        result[2] = h_;
+      }
+    };
+
+    struct FootPathToFootPos : public RightHandSideFunctor {
+      PathPtr_t path_;
+      value_type shiftH_;
+      JointFrameFunctionPtr_t sf_;
+      mutable Configuration_t tmp;
+
+      FootPathToFootPos (DevicePtr_t dev, PathPtr_t p, value_type height_shift)
+        : path_ (p), shiftH_ (height_shift), tmp (p->outputSize ())
+      {
+        JointPtr_t foot = dev->getJointByName ("foot");
+        sf_ = JointFrameFunction::create ("fake-device-foot", dev,
+            JointFrame::create (JointFrame (foot))
+            );
+      }
+
+      void operator () (vectorOut_t result, const value_type& input) const {
+        assert (path_);
+        if (!(*path_) (tmp, input))
+          throw std::runtime_error ("Could not apply constraints");
+        (*sf_) (result, tmp);
+        result[2] += shiftH_;
+      }
+    };
 
     SmallStepsPtr_t SmallSteps::create (const Problem& problem)
     {
@@ -78,7 +128,6 @@ namespace hpp {
       maxStepLength_ (0.2), defaultStepHeight_ (0.05),
       defaultDoubleSupportTime_ (0.1), defaultSingleSupportTime_ (0.6),
       defaultInitializationTime_ (0.6), pg_ ()
-
     {
     }
 
@@ -181,7 +230,7 @@ namespace hpp {
 	stepParameters_.push_back (s);
 	hppDout (info, "s = " << s);
 	if (s == length) {
-	  finished = false;
+	  finished = true;
 	  if (stepLeft) {
 	    footPrints_.push_back (FootPrint (xlf, ylf, clf, slf));
 	    footPrints_.push_back (FootPrint (xrf, yrf, crf, srf));
@@ -210,7 +259,11 @@ namespace hpp {
       }
       getStepParameters (path);
       // Create pattern generator with height of center of mass
-      pg_ = SplineBased::create (robot_->positionCenterOfMass () [2]);
+      value_type comH = robot_->positionCenterOfMass () [2];
+      value_type ankleShift = robot_->leftAnkle()->currentTransformation ().getTranslation () [2];
+      assert (std::abs (ankleShift - robot_->rightAnkle()->currentTransformation ().getTranslation () [2])
+          < Eigen::NumTraits<value_type>::dummy_precision());
+      pg_ = SplineBased::create (comH);
       pg_->defaultStepHeight (defaultStepHeight_);
       // Build time sequence
       std::size_t p = footPrints_.size ();
@@ -240,7 +293,89 @@ namespace hpp {
       pg_->timeSequence (times);
       pg_->footPrintSequence (footPrints_);
       CubicBSplinePtr_t com = pg_->solve ();
-      return path;
+
+      core::ComparisonTypePtr_t equals = core::Equality::create ();
+      // Create the time varying equation for COM
+      model::CenterOfMassComputationPtr_t comComp = model::CenterOfMassComputation::
+        create (robot_);
+      comComp->add (robot_->rootJoint());
+      comComp->computeMass ();
+      PointComFunctionPtr_t comFunc = PointComFunction::create ("COM-walkgen",
+          robot_, PointCom::create (PointCom (comComp)));
+      NumericalConstraintPtr_t comEq = NumericalConstraint::create (comFunc, equals);
+      TimeDependant comEqTD (comEq, RightHandSideFunctorPtr_t (new CubicBSplineToCom (com, comH)));
+
+      // Create an time varying equation for each foot.
+      JointFrameFunctionPtr_t leftFunc = JointFrameFunction::create ("left-foot-walkgen",
+          robot_, JointFrame::create (JointFrame (robot_->leftAnkle ())));
+      NumericalConstraintPtr_t leftEq = NumericalConstraint::create (leftFunc, equals);
+      TimeDependant leftEqTD (leftEq, RightHandSideFunctorPtr_t
+          (new FootPathToFootPos (pg_->leftFoot (), pg_->leftFootTrajectory (), ankleShift))
+          );
+
+      JointFrameFunctionPtr_t rightFunc = JointFrameFunction::create ("right-foot-walkgen",
+          robot_, JointFrame::create (JointFrame (robot_->rightAnkle ())));
+      NumericalConstraintPtr_t rightEq = NumericalConstraint::create (rightFunc, equals);
+      TimeDependant rightEqTD (rightEq, RightHandSideFunctorPtr_t
+          (new FootPathToFootPos (pg_->rightFoot (), pg_->rightFootTrajectory (), ankleShift))
+          );
+
+      ConfigProjectorPtr_t oldProj = path->pathAtRank (0)->constraints()->configProjector ();
+      ConfigProjectorPtr_t proj = ConfigProjector::create (robot_, "stepper-walkgen",
+          oldProj->errorThreshold (), oldProj->maxIterations ());
+      proj->add (comEq);
+      proj->add (leftEq);
+      proj->add (rightEq);
+      ConstraintSetPtr_t constraints = ConstraintSet::create (robot_, "stepper-walkgen-set");
+      constraints->addConstraint (proj);
+
+      PathVectorPtr_t opted = PathVector::create (path->outputSize (),
+          path->outputDerivativeSize ());
+
+      Configuration_t qi (robot_->configSize()), qe (robot_->configSize());
+      value_type lastT = -1;
+      /*
+      std::cout << com->timeRange ().first << ", " << 
+        com->timeRange ().second << std::endl;
+      double dt = 0.1;
+      std::cout << com->timeRange ().first << ", " << 
+        com->timeRange ().second << std::endl;
+      for (double t = com->timeRange ().first; t <= com->timeRange ().second; t+=dt) {
+        vector_t comV = (*com) (t);
+        std::cout << t << "\t" << comV [0] << "\t" << comV [1] << std::endl;
+      }
+      std::cout << "===============================" << std::endl;
+      // */
+      for (PiecewiseAffine::Pairs_t::const_iterator it = param.pairs_.begin ();
+          it != param.pairs_.end (); ++it) {
+        value_type T = it->first;
+        value_type S = it->second;
+        (*path) (qe, S);
+        {
+          comEqTD.rhsAbscissa (T);
+          leftEqTD.rhsAbscissa (T);
+          rightEqTD.rhsAbscissa (T);
+        }
+        proj->updateRightHandSide ();
+        constraints->apply (qe);
+        assert (constraints->isSatisfied (qe));
+        //std::cout << T << ": " << (*com) (T).transpose() << std::endl;
+        if (lastT >= 0) {
+          TimeDependantPathPtr_t p = TimeDependantPath::create
+            (StraightPath::create (robot_,qi,qe,T - lastT), constraints);
+          p->add (comEqTD); p->add (leftEqTD); p->add (rightEqTD);
+          p->setAffineTransform (1, lastT);
+          Configuration_t qtest = qi;
+          assert ((*p) (qtest, 0));
+          assert ((qtest - qi).isZero ());
+          assert ((*p) (qtest, T - lastT));
+          assert ((qtest - qe).isZero ());
+          opted->appendPath (p);
+        }
+        lastT = T;
+        qi = qe;
+      }
+      return opted;
     }
   } // wholebodyStep
 } // namespace hpp
