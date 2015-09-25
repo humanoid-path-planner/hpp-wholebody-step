@@ -34,6 +34,8 @@
 #include <hpp/core/straight-path.hh>
 #include <hpp/core/constraint-set.hh>
 #include <hpp/core/config-projector.hh>
+#include <hpp/core/path-validation.hh>
+#include <hpp/core/path-validation-report.hh>
 
 #include <hpp/walkgen/bspline-based.hh>
 #include <hpp/walkgen/foot-print.hh>
@@ -43,7 +45,7 @@
 
 namespace hpp {
   namespace wholebodyStep {
-    typedef walkgen::Times_t Times_t;
+
     /// Compute parameter along initial path with respect to time.
     class PiecewiseAffine
     {
@@ -170,15 +172,19 @@ namespace hpp {
 	// Store foot prints
 	if (s==0) {
 	  // left foot first
-	  footPrints_.push_back (FootPrint (xlf, ylf, clf, slf));
-	  footPrints_.push_back (FootPrint (xrf, yrf, crf, srf));
+          footPrints_.push_back (FootPrint (xlf, ylf, clf, slf));
+          footPrintsIsRight_.push_back (false);
+          footPrints_.push_back (FootPrint (xrf, yrf, crf, srf));
+          footPrintsIsRight_.push_back (true);
 	  stepLeft = true;
 	} else {
 	  if (stepLeft) {
-	    footPrints_.push_back (FootPrint (xlf, ylf, clf, slf));
+            footPrints_.push_back (FootPrint (xlf, ylf, clf, slf));
+            footPrintsIsRight_.push_back (false);
 	    stepLeft = false;
 	  } else {
-	    footPrints_.push_back (FootPrint (xrf, yrf, crf, srf));
+            footPrints_.push_back (FootPrint (xrf, yrf, crf, srf));
+            footPrintsIsRight_.push_back (true);
 	    stepLeft = true;
 	  }
 	}
@@ -233,18 +239,14 @@ namespace hpp {
 	  finished = true;
 	  if (stepLeft) {
 	    footPrints_.push_back (FootPrint (xlf, ylf, clf, slf));
-	    footPrints_.push_back (FootPrint (xrf, yrf, crf, srf));
+            footPrintsIsRight_.push_back (false);
+            footPrints_.push_back (FootPrint (xrf, yrf, crf, srf));
+            footPrintsIsRight_.push_back (true);
 	  } else {
-	    footPrints_.push_back (FootPrint (xrf, yrf, crf, srf));
-	    footPrints_.push_back (FootPrint (xlf, ylf, clf, slf));
-	  }
-	} else {
-	  if (stepLeft) {
-	    footPrints_.push_back (FootPrint (xlf, ylf, clf, slf));
-	    stepLeft = false;
-	  } else {
-	    footPrints_.push_back (FootPrint (xrf, yrf, crf, srf));
-	    stepLeft = true;
+            footPrints_.push_back (FootPrint (xrf, yrf, crf, srf));
+            footPrintsIsRight_.push_back (true);
+            footPrints_.push_back (FootPrint (xlf, ylf, clf, slf));
+            footPrintsIsRight_.push_back (false);
 	  }
 	}
       } // while (!finished)
@@ -265,117 +267,201 @@ namespace hpp {
           < Eigen::NumTraits<value_type>::dummy_precision());
       pg_ = SplineBased::create (comH);
       pg_->defaultStepHeight (defaultStepHeight_);
+      bool valid = false;
+      std::size_t nbTries = 0;
+      PathVectorPtr_t opted;
+
       // Build time sequence
       std::size_t p = footPrints_.size ();
-      Times_t times (2*p - 2);
-      times [0] = 0.;
-      value_type t = defaultInitializationTime_;
-      times [1] = t;
-      for (std::size_t i=1; i < p-1; ++i) {
-	t += defaultSingleSupportTime_;
-	times [2*i] = t;
-	t += defaultDoubleSupportTime_;
-	times [2*i+1] = t;
-      }
-      times [2*p-3] = times [2*p-4] + defaultInitializationTime_;
-      for (FootPrints_t::const_iterator it = footPrints_.begin ();
-	   it != footPrints_.end (); ++it) {
+      Times_t times = buildInitialTimes (p);
 
-      }
-      // Build time parameterization of initial path
-      PiecewiseAffine param;
-      param.addPair (0., 0.);
-      for (std::size_t i=0; i<p-3; ++i) {
-	param.addPair (.5*(times [2*i+2] + times [2*i+3]),
-		       .5*(stepParameters_ [i] + stepParameters_ [i+1]));
-      }
-      param.addPair (times [2*p-3], stepParameters_ [p-3]);
-      pg_->timeSequence (times);
-      pg_->footPrintSequence (footPrints_);
-      CubicBSplinePtr_t com = pg_->solve ();
-
-      core::ComparisonTypePtr_t equals = core::Equality::create ();
-      // Create the time varying equation for COM
-      model::CenterOfMassComputationPtr_t comComp = model::CenterOfMassComputation::
-        create (robot_);
-      comComp->add (robot_->rootJoint());
-      comComp->computeMass ();
-      PointComFunctionPtr_t comFunc = PointComFunction::create ("COM-walkgen",
-          robot_, PointCom::create (PointCom (comComp)));
-      NumericalConstraintPtr_t comEq = NumericalConstraint::create (comFunc, equals);
-      TimeDependant comEqTD (comEq, RightHandSideFunctorPtr_t (new CubicBSplineToCom (com, comH)));
-
-      // Create an time varying equation for each foot.
-      JointFrameFunctionPtr_t leftFunc = JointFrameFunction::create ("left-foot-walkgen",
-          robot_, JointFrame::create (JointFrame (robot_->leftAnkle ())));
-      NumericalConstraintPtr_t leftEq = NumericalConstraint::create (leftFunc, equals);
-      TimeDependant leftEqTD (leftEq, RightHandSideFunctorPtr_t
-          (new FootPathToFootPos (pg_->leftFoot (), pg_->leftFootTrajectory (), ankleShift))
-          );
-
-      JointFrameFunctionPtr_t rightFunc = JointFrameFunction::create ("right-foot-walkgen",
-          robot_, JointFrame::create (JointFrame (robot_->rightAnkle ())));
-      NumericalConstraintPtr_t rightEq = NumericalConstraint::create (rightFunc, equals);
-      TimeDependant rightEqTD (rightEq, RightHandSideFunctorPtr_t
-          (new FootPathToFootPos (pg_->rightFoot (), pg_->rightFootTrajectory (), ankleShift))
-          );
-
-      ConfigProjectorPtr_t oldProj = path->pathAtRank (0)->constraints()->configProjector ();
-      ConfigProjectorPtr_t proj = ConfigProjector::create (robot_, "stepper-walkgen",
-          oldProj->errorThreshold (), oldProj->maxIterations ());
-      proj->add (comEq);
-      proj->add (leftEq);
-      proj->add (rightEq);
-      ConstraintSetPtr_t constraints = ConstraintSet::create (robot_, "stepper-walkgen-set");
-      constraints->addConstraint (proj);
-
-      PathVectorPtr_t opted = PathVector::create (path->outputSize (),
-          path->outputDerivativeSize ());
-
-      Configuration_t qi (robot_->configSize()), qe (robot_->configSize());
-      value_type lastT = -1;
-      /*
-      std::cout << com->timeRange ().first << ", " << 
-        com->timeRange ().second << std::endl;
-      double dt = 0.1;
-      std::cout << com->timeRange ().first << ", " << 
-        com->timeRange ().second << std::endl;
-      for (double t = com->timeRange ().first; t <= com->timeRange ().second; t+=dt) {
-        vector_t comV = (*com) (t);
-        std::cout << t << "\t" << comV [0] << "\t" << comV [1] << std::endl;
-      }
-      std::cout << "===============================" << std::endl;
-      // */
-      for (PiecewiseAffine::Pairs_t::const_iterator it = param.pairs_.begin ();
-          it != param.pairs_.end (); ++it) {
-        value_type T = it->first;
-        value_type S = it->second;
-        (*path) (qe, S);
-        {
-          comEqTD.rhsAbscissa (T);
-          leftEqTD.rhsAbscissa (T);
-          rightEqTD.rhsAbscissa (T);
+      while (!valid && nbTries < 50) {
+        // Build time parameterization of initial path
+        // There are two footprints per step parameter
+        PiecewiseAffine param;
+        param.addPair (0., stepParameters_ [0]);
+        for (std::size_t i=0; i<p-3; ++i) {
+          param.addPair (.5*(times [2*i+1] + times [2*i+2]),
+              .5*(stepParameters_ [i] + stepParameters_ [i+1]));
         }
-        proj->updateRightHandSide ();
-        constraints->apply (qe);
-        assert (constraints->isSatisfied (qe));
-        //std::cout << T << ": " << (*com) (T).transpose() << std::endl;
-        if (lastT >= 0) {
-          TimeDependantPathPtr_t p = TimeDependantPath::create
-            (StraightPath::create (robot_,qi,qe,T - lastT), constraints);
-          p->add (comEqTD); p->add (leftEqTD); p->add (rightEqTD);
-          p->setAffineTransform (1, lastT);
-          Configuration_t qtest = qi;
-          assert ((*p) (qtest, 0));
-          assert ((qtest - qi).isZero ());
-          assert ((*p) (qtest, T - lastT));
-          assert ((qtest - qe).isZero ());
-          opted->appendPath (p);
+        param.addPair (times [2*p-3], stepParameters_ [p-3]);
+
+        pg_->timeSequence (times);
+        pg_->footPrintSequence (footPrints_);
+        CubicBSplinePtr_t com = pg_->solve ();
+
+        core::ComparisonTypePtr_t equals = core::Equality::create ();
+        // Create the time varying equation for COM
+        model::CenterOfMassComputationPtr_t comComp = model::CenterOfMassComputation::
+          create (robot_);
+        comComp->add (robot_->rootJoint());
+        comComp->computeMass ();
+        PointComFunctionPtr_t comFunc = PointComFunction::create ("COM-walkgen",
+            robot_, PointCom::create (PointCom (comComp)));
+        NumericalConstraintPtr_t comEq = NumericalConstraint::create (comFunc, equals);
+        TimeDependant comEqTD (comEq, RightHandSideFunctorPtr_t (new CubicBSplineToCom (com, comH)));
+
+        // Create an time varying equation for each foot.
+        JointFrameFunctionPtr_t leftFunc = JointFrameFunction::create ("left-foot-walkgen",
+            robot_, JointFrame::create (JointFrame (robot_->leftAnkle ())));
+        NumericalConstraintPtr_t leftEq = NumericalConstraint::create (leftFunc, equals);
+        TimeDependant leftEqTD (leftEq, RightHandSideFunctorPtr_t
+            (new FootPathToFootPos (pg_->leftFoot (), pg_->leftFootTrajectory (), ankleShift))
+            );
+
+        JointFrameFunctionPtr_t rightFunc = JointFrameFunction::create ("right-foot-walkgen",
+            robot_, JointFrame::create (JointFrame (robot_->rightAnkle ())));
+        NumericalConstraintPtr_t rightEq = NumericalConstraint::create (rightFunc, equals);
+        TimeDependant rightEqTD (rightEq, RightHandSideFunctorPtr_t
+            (new FootPathToFootPos (pg_->rightFoot (), pg_->rightFootTrajectory (), ankleShift))
+            );
+
+        ConfigProjectorPtr_t oldProj = path->pathAtRank (0)->constraints()->configProjector ();
+        ConfigProjectorPtr_t proj = ConfigProjector::create (robot_, "stepper-walkgen",
+            oldProj->errorThreshold (), oldProj->maxIterations ());
+        proj->add (comEq);
+        proj->add (leftEq);
+        proj->add (rightEq);
+        ConstraintSetPtr_t constraints = ConstraintSet::create (robot_, "stepper-walkgen-set");
+        constraints->addConstraint (proj);
+
+        opted = PathVector::create (path->outputSize (),
+            path->outputDerivativeSize ());
+
+        Configuration_t qi (robot_->configSize()), qe (robot_->configSize());
+        value_type lastT = -1;
+        for (PiecewiseAffine::Pairs_t::const_iterator it = param.pairs_.begin ();
+            it != param.pairs_.end (); ++it) {
+          value_type T = it->first;
+          value_type S = it->second;
+          (*path) (qe, S);
+          {
+            comEqTD.rhsAbscissa (T);
+            leftEqTD.rhsAbscissa (T);
+            rightEqTD.rhsAbscissa (T);
+          }
+          proj->updateRightHandSide ();
+          bool success = constraints->apply (qe);
+          assert (success);
+          if (lastT >= 0) {
+            TimeDependantPathPtr_t p = TimeDependantPath::create
+              (StraightPath::create (robot_,qi,qe,T - lastT), constraints);
+            p->add (comEqTD); p->add (leftEqTD); p->add (rightEqTD);
+            p->setAffineTransform (1, lastT);
+            Configuration_t qtest = qi;
+            assert ((*p) (qtest, 0));
+            assert ((qtest - qi).isZero ());
+            assert ((*p) (qtest, T - lastT));
+            assert ((qtest - qe).isZero ());
+            opted->appendPath (p);
+          }
+          lastT = T;
+          qi = qe;
         }
-        lastT = T;
-        qi = qe;
+        core::PathValidationPtr_t pv = problem().pathValidation ();
+        PathPtr_t unused;
+        core::PathValidationReportPtr_t report;
+        valid = pv->validate (opted, false, unused, report);
+        if (!valid) {
+          typedef std::vector <value_type> SPs_t; // Step parameters
+          assert (report);
+          // Find step parameter before and after collision
+          SPs_t::iterator itStepA = // before
+            std::lower_bound (stepParameters_.begin (), stepParameters_.end (),
+                param (report->parameter));
+          SPs_t::iterator itStepB = itStepA; // after
+          --itStepB; --itStepB;
+          ++itStepA;
+          std::size_t ib_sp = std::distance (stepParameters_.begin (), itStepB) + 1;
+
+          // Update the step parameters and footprints
+          std::size_t ib_fp = ib_sp + 1;
+          FootPrints_t::iterator itFPB = footPrints_.begin (); std::advance (itFPB, ib_fp);
+          std::vector<bool>::iterator itFPiRB = footPrintsIsRight_.begin (); std::advance (itFPiRB, ib_fp);
+          value_type step = (*itStepA - *itStepB ) / 5;
+
+          std::vector<bool> newFPiRs(2);
+          SPs_t newSPs(2);
+          footPrintsIsRight_.insert (itFPiRB + 1, newFPiRs.begin (), newFPiRs.end ());
+          stepParameters_.insert (itStepB + 1, newSPs.begin (), newSPs.end ());
+          for (std::size_t i = 0; i < 4; ++i)
+            stepParameters_[ib_sp + i] = stepParameters_[ib_sp - 1 + i] + step;
+          // stepParameters_[ib_sp + 0] = stepParameters_[ib_sp - 1] + step;
+          // stepParameters_[ib_sp + 1] = stepParameters_[ib_sp - 0] + step;
+          // stepParameters_[ib_sp + 2] = stepParameters_[ib_sp + 1] + step;
+          // stepParameters_[ib_sp + 3] = stepParameters_[ib_sp + 2] + step;
+          assert (std::abs (stepParameters_[ib_sp + 4] - stepParameters_[ib_sp + 3] - step) < 1e-6);
+          //footPrintsIsRight_[ib_fp + 0] =  footPrintsIsRight_[ib_fp + 0];
+          footPrintsIsRight_[ib_fp + 1] = !footPrintsIsRight_[ib_fp + 0];
+          footPrintsIsRight_[ib_fp + 2] =  footPrintsIsRight_[ib_fp + 0];
+          assert (footPrintsIsRight_[ib_fp + 3] == !footPrintsIsRight_[ib_fp + 0]);
+
+          FootPrints_t newFPs (2, footPrints_ [ib_fp]);
+          footPrints_.insert (itFPB + 1, newFPs.begin (), newFPs.end ());
+          for (std::size_t i = 0; i < 4; ++i) {
+            footPrints_[ib_fp + i] = footPrintAtParam
+              (path, stepParameters_[ib_sp + i], footPrintsIsRight_[ib_fp + i]);
+          }
+
+          // Update times
+          // Linearly interpolate between the times corresponding to the two last steps.
+          // ib_times is the first DD time that should decrease.
+          std::size_t ib_times = 2 * ib_sp;
+          const value_type ratio = defaultSingleSupportTime_ / defaultDoubleSupportTime_;
+          const value_type interval = times[ib_times+3] - times[ib_times-1];
+          Times_t::iterator itTimesB = times.begin (); std::advance (itTimesB, ib_times);
+          Times_t newTimes (4);
+          times.insert (itTimesB + 1, newTimes.begin(), newTimes.end ());
+
+          // interval = 4 * newSST + 4 * newDST
+          // ratio    = newSST / newDST
+          value_type newDST = ( interval / 4 ) / ( 1 + 1 * ratio );
+          value_type newSST = ( interval / 4 ) - newDST;
+          for (std::size_t i = 0; i < 4; ++i) {
+            times[ib_times + 2*i    ] = times[ib_times + 2*i - 1] + newSST;
+            times[ib_times + 2*i + 1] = times[ib_times + 2*i    ] + newDST;
+          }
+          // assert (times[ib_times + 1] == newTimes[3] + newSST)
+
+          // Prepare next iteration
+          p = footPrints_.size ();
+        }
       }
       return opted;
+    }
+
+    FootPrint SmallSteps::footPrintAtParam (const PathPtr_t& p, value_type s, bool right) const
+    {
+      assert (robot_);
+      Configuration_t q (robot_->configSize ());
+      (*p) (q, s);
+      robot_->currentConfiguration (q);
+      robot_->computeForwardKinematics ();
+      JointPtr_t a;
+      if (right) a = robot_->rightAnkle ();
+      else       a = robot_->leftAnkle ();
+      value_type xf, yf, cf, sf;
+      xf = a->currentTransformation ().getTranslation () [0];
+      yf = a->currentTransformation ().getTranslation () [1];
+      cf = a->currentTransformation ().getRotation () (0,0);
+      sf = a->currentTransformation ().getRotation () (0,1);
+      return FootPrint (xf, yf, cf, sf);
+    }
+
+    SmallSteps::Times_t SmallSteps::buildInitialTimes (const std::size_t& p)
+    {
+        Times_t times (2*p - 2);
+        times [0] = 0.;
+        value_type t = defaultInitializationTime_;
+        times [1] = t;
+        for (std::size_t i=1; i < p-1; ++i) {
+          t += defaultSingleSupportTime_;
+          times [2*i] = t;
+          t += defaultDoubleSupportTime_;
+          times [2*i+1] = t;
+        }
+        times [2*p-3] = times [2*p-4] + defaultInitializationTime_;
+        return times;
     }
   } // wholebodyStep
 } // namespace hpp

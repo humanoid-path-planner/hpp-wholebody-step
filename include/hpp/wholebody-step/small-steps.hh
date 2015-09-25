@@ -34,6 +34,8 @@ namespace hpp {
     {
     public:
       typedef walkgen::FootPrints_t FootPrints_t;
+      typedef walkgen::Times_t Times_t;
+
       /// Create instance and return shared pointer
       ///
       /// \param problem problem to solve,
@@ -50,6 +52,9 @@ namespace hpp {
       void init (const SmallStepsWkPtr_t& weak);
     private:
       void getStepParameters (const PathVectorPtr_t& path);
+      FootPrint footPrintAtParam (const PathPtr_t& path, value_type s, bool right) const;
+      Times_t buildInitialTimes (const std::size_t& p);
+
       HumanoidRobotPtr_t robot_;
       value_type minStepLength_;
       value_type maxStepLength_;
@@ -63,6 +68,7 @@ namespace hpp {
       // chosen as foot print
       std::vector <value_type> stepParameters_;
       FootPrints_t footPrints_;
+      std::vector <bool> footPrintsIsRight_;
       SmallStepsWkPtr_t weakPtr_;
     }; // class SmallSteps
   } // namespace wholebodyStep
