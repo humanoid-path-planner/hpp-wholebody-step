@@ -45,39 +45,29 @@
 
 namespace hpp {
   namespace wholebodyStep {
-
-    /// Compute parameter along initial path with respect to time.
-    class PiecewiseAffine
+    value_type SmallSteps::PiecewiseAffine::operator () (const value_type& t) const
     {
-    public:
-      typedef std::map <value_type, value_type> Pairs_t;
-
-      value_type operator () (const value_type& t) const
-      {
-	Pairs_t::const_iterator it = pairs_.lower_bound (t);
-	if (it == pairs_.end ()) {
-	  --it; return it->second;
-	} else if (it == pairs_.begin ()) {
-	  return it->second;
-	} else {
-	  value_type t1 = it->first;
-	  value_type p1 = it->second;
-	  --it;
-	  value_type t0 = it->first;
-	  value_type p0 = it->second;
-	  value_type alpha = (t-t0)/(t1-t0);
-	  return (1-alpha)*p0 + alpha*p1;
-	}
+      Pairs_t::const_iterator it = pairs_.lower_bound (t);
+      if (it == pairs_.end ()) {
+        --it; return it->second;
+      } else if (it == pairs_.begin ()) {
+        return it->second;
+      } else {
+        value_type t1 = it->first;
+        value_type p1 = it->second;
+        --it;
+        value_type t0 = it->first;
+        value_type p0 = it->second;
+        value_type alpha = (t-t0)/(t1-t0);
+        return (1-alpha)*p0 + alpha*p1;
       }
-      /// Add a pair (time, parameter)
-      void addPair (const value_type& t, const value_type value)
-      {
-	hppDout (info, "Adding pair: " << t << ", " << value);
-	pairs_ [t] = value;
-      }
+    }
 
-      Pairs_t pairs_;
-    }; // class PiecewiseAffine
+    void SmallSteps::PiecewiseAffine::addPair (const value_type& t, const value_type value)
+    {
+      hppDout (info, "Adding pair: " << t << ", " << value);
+      pairs_ [t] = value;
+    }
 
     struct CubicBSplineToCom : public RightHandSideFunctor {
       CubicBSplinePtr_t cubic_;
@@ -143,10 +133,6 @@ namespace hpp {
       stepParameters_.clear ();
       footPrints_.clear ();
       value_type eps = 1e-3;
-      JointPtr_t la = robot_->leftAnkle ();
-      JointPtr_t ra = robot_->rightAnkle ();
-      value_type xlf, ylf, xrf, yrf, xlf_next, ylf_next, xrf_next, yrf_next;
-      value_type clf, slf, crf, srf;
       value_type s = 0, s_next;
       stepParameters_.push_back (s);
       hppDout (info, "s = " << s);
@@ -155,35 +141,23 @@ namespace hpp {
       bool stepLeft;
       value_type halfStepLength = .5*maxStepLength_;
       while (!finished) {
-	bool success = true;
-	Configuration_t q = (*path) (s, success);
-	assert (success);
-	// Compute position of both feet at s
-	robot_->currentConfiguration (q);
-	robot_->computeForwardKinematics ();
-	xlf = la->currentTransformation ().getTranslation () [0];
-	ylf = la->currentTransformation ().getTranslation () [1];
-	clf = la->currentTransformation ().getRotation () (0,0);
-	slf = la->currentTransformation ().getRotation () (0,1);
-	xrf = ra->currentTransformation ().getTranslation () [0];
-	yrf = ra->currentTransformation ().getTranslation () [1];
-	crf = ra->currentTransformation ().getRotation () (0,0);
-	srf = ra->currentTransformation ().getRotation () (0,1);
+        FootPrint rfp = footPrintAtParam (path, s, true);
+        FootPrint lfp = footPrintAtParam (path, s, false);
 	// Store foot prints
 	if (s==0) {
 	  // left foot first
-          footPrints_.push_back (FootPrint (xlf, ylf, clf, slf));
+          footPrints_.push_back (lfp);
           footPrintsIsRight_.push_back (false);
-          footPrints_.push_back (FootPrint (xrf, yrf, crf, srf));
+          footPrints_.push_back (rfp);
           footPrintsIsRight_.push_back (true);
 	  stepLeft = true;
 	} else {
 	  if (stepLeft) {
-            footPrints_.push_back (FootPrint (xlf, ylf, clf, slf));
+            footPrints_.push_back (lfp);
             footPrintsIsRight_.push_back (false);
 	    stepLeft = false;
 	  } else {
-            footPrints_.push_back (FootPrint (xrf, yrf, crf, srf));
+            footPrints_.push_back (rfp);
             footPrintsIsRight_.push_back (true);
 	    stepLeft = true;
 	  }
@@ -192,18 +166,11 @@ namespace hpp {
 	bool found = false;
 	while (!found) {
 	  // Compute position of both feet at s_next
-	  q = (*path) (s_next, success);
-	  assert (success);
-	  robot_->currentConfiguration (q);
-	  robot_->computeForwardKinematics ();
-	  xlf_next = la->currentTransformation ().getTranslation () [0];
-	  ylf_next = la->currentTransformation ().getTranslation () [1];
-	  xrf_next = ra->currentTransformation ().getTranslation () [0];
-	  yrf_next = ra->currentTransformation ().getTranslation () [1];
-	  value_type dlf = sqrt ((xlf_next - xlf)*(xlf_next - xlf)
-				   + (ylf_next - ylf)*(ylf_next - ylf));
-	  value_type drf = sqrt((xrf_next - xrf)*(xrf_next - xrf)
-				+ (yrf_next - yrf)*(yrf_next - yrf));
+          FootPrint rfp_next = footPrintAtParam (path, s_next, true);
+          FootPrint lfp_next = footPrintAtParam (path, s_next, false);
+	  value_type drf = (rfp.position - rfp_next.position).norm ();
+	  value_type dlf = (lfp.position - lfp_next.position).norm ();
+
 	  if ((halfStepLength - eps < dlf) && (dlf < halfStepLength + eps)
 	      && (halfStepLength - eps < drf) && (drf < halfStepLength + eps)) {
 	    found = true;
@@ -226,26 +193,25 @@ namespace hpp {
 		(length, s + (halfStepLength/drf) * (s_next - s));
 	    }
 	  }
+          if (found) {
+            rfp = rfp_next;
+            lfp = lfp_next;
+          }
 	} // while (!found)
 	s = s_next;
-	xlf = xlf_next; ylf = ylf_next; xrf = xrf_next; yrf = yrf_next;
-	clf = la->currentTransformation ().getRotation () (0,0);
-	slf = la->currentTransformation ().getRotation () (0,1);
-	crf = ra->currentTransformation ().getRotation () (0,0);
-	srf = ra->currentTransformation ().getRotation () (0,1);
 	stepParameters_.push_back (s);
 	hppDout (info, "s = " << s);
 	if (s == length) {
 	  finished = true;
 	  if (stepLeft) {
-	    footPrints_.push_back (FootPrint (xlf, ylf, clf, slf));
+	    footPrints_.push_back (lfp);
             footPrintsIsRight_.push_back (false);
-            footPrints_.push_back (FootPrint (xrf, yrf, crf, srf));
+            footPrints_.push_back (rfp);
             footPrintsIsRight_.push_back (true);
 	  } else {
-            footPrints_.push_back (FootPrint (xrf, yrf, crf, srf));
+            footPrints_.push_back (rfp);
             footPrintsIsRight_.push_back (true);
-            footPrints_.push_back (FootPrint (xlf, ylf, clf, slf));
+            footPrints_.push_back (lfp);
             footPrintsIsRight_.push_back (false);
 	  }
 	}
@@ -290,74 +256,8 @@ namespace hpp {
         pg_->footPrintSequence (footPrints_);
         CubicBSplinePtr_t com = pg_->solve ();
 
-        core::ComparisonTypePtr_t equals = core::Equality::create ();
-        // Create the time varying equation for COM
-        model::CenterOfMassComputationPtr_t comComp = model::CenterOfMassComputation::
-          create (robot_);
-        comComp->add (robot_->rootJoint());
-        comComp->computeMass ();
-        PointComFunctionPtr_t comFunc = PointComFunction::create ("COM-walkgen",
-            robot_, PointCom::create (PointCom (comComp)));
-        NumericalConstraintPtr_t comEq = NumericalConstraint::create (comFunc, equals);
-        TimeDependant comEqTD (comEq, RightHandSideFunctorPtr_t (new CubicBSplineToCom (com, comH)));
+        opted = generateOptimizedPath (path, param.pairs_, com, comH, ankleShift);
 
-        // Create an time varying equation for each foot.
-        JointFrameFunctionPtr_t leftFunc = JointFrameFunction::create ("left-foot-walkgen",
-            robot_, JointFrame::create (JointFrame (robot_->leftAnkle ())));
-        NumericalConstraintPtr_t leftEq = NumericalConstraint::create (leftFunc, equals);
-        TimeDependant leftEqTD (leftEq, RightHandSideFunctorPtr_t
-            (new FootPathToFootPos (pg_->leftFoot (), pg_->leftFootTrajectory (), ankleShift))
-            );
-
-        JointFrameFunctionPtr_t rightFunc = JointFrameFunction::create ("right-foot-walkgen",
-            robot_, JointFrame::create (JointFrame (robot_->rightAnkle ())));
-        NumericalConstraintPtr_t rightEq = NumericalConstraint::create (rightFunc, equals);
-        TimeDependant rightEqTD (rightEq, RightHandSideFunctorPtr_t
-            (new FootPathToFootPos (pg_->rightFoot (), pg_->rightFootTrajectory (), ankleShift))
-            );
-
-        ConfigProjectorPtr_t oldProj = path->pathAtRank (0)->constraints()->configProjector ();
-        ConfigProjectorPtr_t proj = ConfigProjector::create (robot_, "stepper-walkgen",
-            oldProj->errorThreshold (), oldProj->maxIterations ());
-        proj->add (comEq);
-        proj->add (leftEq);
-        proj->add (rightEq);
-        ConstraintSetPtr_t constraints = ConstraintSet::create (robot_, "stepper-walkgen-set");
-        constraints->addConstraint (proj);
-
-        opted = PathVector::create (path->outputSize (),
-            path->outputDerivativeSize ());
-
-        Configuration_t qi (robot_->configSize()), qe (robot_->configSize());
-        value_type lastT = -1;
-        for (PiecewiseAffine::Pairs_t::const_iterator it = param.pairs_.begin ();
-            it != param.pairs_.end (); ++it) {
-          value_type T = it->first;
-          value_type S = it->second;
-          (*path) (qe, S);
-          {
-            comEqTD.rhsAbscissa (T);
-            leftEqTD.rhsAbscissa (T);
-            rightEqTD.rhsAbscissa (T);
-          }
-          proj->updateRightHandSide ();
-          bool success = constraints->apply (qe);
-          assert (success);
-          if (lastT >= 0) {
-            TimeDependantPathPtr_t p = TimeDependantPath::create
-              (StraightPath::create (robot_,qi,qe,T - lastT), constraints);
-            p->add (comEqTD); p->add (leftEqTD); p->add (rightEqTD);
-            p->setAffineTransform (1, lastT);
-            Configuration_t qtest = qi;
-            assert ((*p) (qtest, 0));
-            assert ((qtest - qi).isZero ());
-            assert ((*p) (qtest, T - lastT));
-            assert ((qtest - qe).isZero ());
-            opted->appendPath (p);
-          }
-          lastT = T;
-          qi = qe;
-        }
         core::PathValidationPtr_t pv = problem().pathValidation ();
         PathPtr_t unused;
         core::PathValidationReportPtr_t report;
@@ -462,6 +362,84 @@ namespace hpp {
         }
         times [2*p-3] = times [2*p-4] + defaultInitializationTime_;
         return times;
+    }
+
+    PathVectorPtr_t SmallSteps::generateOptimizedPath (PathVectorPtr_t path,
+        const TimeToParameterMap_t& TTP, CubicBSplinePtr_t com,
+        value_type comHeight, value_type ankleShift)
+    {
+      assert (robot_);
+
+      core::ComparisonTypePtr_t equals = core::Equality::create ();
+
+      // Create the time varying equation for COM
+      model::CenterOfMassComputationPtr_t comComp = model::CenterOfMassComputation::
+        create (robot_);
+      comComp->add (robot_->rootJoint());
+      comComp->computeMass ();
+      PointComFunctionPtr_t comFunc = PointComFunction::create ("COM-walkgen",
+          robot_, PointCom::create (PointCom (comComp)));
+      NumericalConstraintPtr_t comEq = NumericalConstraint::create (comFunc, equals);
+      TimeDependant comEqTD (comEq, RightHandSideFunctorPtr_t (new CubicBSplineToCom (com, comHeight)));
+
+      // Create an time varying equation for each foot.
+      JointFrameFunctionPtr_t leftFunc = JointFrameFunction::create ("left-foot-walkgen",
+          robot_, JointFrame::create (JointFrame (robot_->leftAnkle ())));
+      NumericalConstraintPtr_t leftEq = NumericalConstraint::create (leftFunc, equals);
+      TimeDependant leftEqTD (leftEq, RightHandSideFunctorPtr_t
+          (new FootPathToFootPos (pg_->leftFoot (), pg_->leftFootTrajectory (), ankleShift))
+          );
+
+      JointFrameFunctionPtr_t rightFunc = JointFrameFunction::create ("right-foot-walkgen",
+          robot_, JointFrame::create (JointFrame (robot_->rightAnkle ())));
+      NumericalConstraintPtr_t rightEq = NumericalConstraint::create (rightFunc, equals);
+      TimeDependant rightEqTD (rightEq, RightHandSideFunctorPtr_t
+          (new FootPathToFootPos (pg_->rightFoot (), pg_->rightFootTrajectory (), ankleShift))
+          );
+
+      ConfigProjectorPtr_t oldProj = path->pathAtRank (0)->constraints()->configProjector ();
+      ConfigProjectorPtr_t proj = ConfigProjector::create (robot_, "stepper-walkgen",
+          oldProj->errorThreshold (), oldProj->maxIterations ());
+      proj->add (comEq);
+      proj->add (leftEq);
+      proj->add (rightEq);
+      ConstraintSetPtr_t constraints = ConstraintSet::create (robot_, "stepper-walkgen-set");
+      constraints->addConstraint (proj);
+
+      PathVectorPtr_t opted = PathVector::create (path->outputSize (),
+          path->outputDerivativeSize ());
+
+      Configuration_t qi (robot_->configSize()), qe (robot_->configSize());
+      value_type lastT = -1;
+      for (TimeToParameterMap_t::const_iterator it = TTP.begin ();
+          it != TTP.end (); ++it) {
+        value_type T = it->first;
+        value_type S = it->second;
+        (*path) (qe, S);
+        {
+          comEqTD.rhsAbscissa (T);
+          leftEqTD.rhsAbscissa (T);
+          rightEqTD.rhsAbscissa (T);
+        }
+        proj->updateRightHandSide ();
+        bool success = constraints->apply (qe);
+        assert (success);
+        if (lastT >= 0) {
+          TimeDependantPathPtr_t p = TimeDependantPath::create
+            (StraightPath::create (robot_,qi,qe,T - lastT), constraints);
+          p->add (comEqTD); p->add (leftEqTD); p->add (rightEqTD);
+          p->setAffineTransform (1, lastT);
+          Configuration_t qtest = qi;
+          assert ((*p) (qtest, 0));
+          assert ((qtest - qi).isZero ());
+          assert ((*p) (qtest, T - lastT));
+          assert ((qtest - qe).isZero ());
+          opted->appendPath (p);
+        }
+        lastT = T;
+        qi = qe;
+      }
+      return opted;
     }
   } // wholebodyStep
 } // namespace hpp
