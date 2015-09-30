@@ -51,6 +51,8 @@ namespace hpp {
     using hpp::core::ComparisonType;
     using hpp::core::ComparisonTypes;
 
+    const std::string STABILITY_CONTEXT = "stability";
+
     std::vector <NumericalConstraintPtr_t> createSlidingStabilityConstraint
     (const DevicePtr_t& robot, const JointPtr_t& leftAnkle,
      const JointPtr_t& rightAnkle, ConfigurationIn_t configuration)
@@ -82,10 +84,12 @@ namespace hpp {
       vector3_t xloc = R1T * (x - M1.getTranslation ());
       result.push_back (NumericalConstraint::create (RelativeCom::create
             (robot, comc, joint1, xloc)));
+      result.back ()->function ().context (STABILITY_CONTEXT);
       // Relative orientation of the feet
       matrix3_t reference = R1T * M2.getRotation ();
       result.push_back(NumericalConstraint::create (RelativeOrientation::create
 		       (robot, joint1, joint2, reference)));
+      result.back ()->function ().context (STABILITY_CONTEXT);
       // Relative position of the feet
       vector3_t local1; local1.setZero ();
       vector3_t global1 = M1.getTranslation ();
@@ -95,17 +99,20 @@ namespace hpp {
       vector3_t local2 = R2T * (global1 - M2.getTranslation ());
       result.push_back (NumericalConstraint::create (RelativePosition::create
 			(robot, joint1, joint2, local1, local2)));
+      result.back ()->function ().context (STABILITY_CONTEXT);
       // Orientation of the left foot
       reference.setIdentity ();
       result.push_back (NumericalConstraint::create (Orientation::create
             (robot, joint1, reference, boost::assign::list_of
 			      (true)(true)(false))));
+      result.back ()->function ().context (STABILITY_CONTEXT);
       // Position of the left foot
       vector3_t zero; zero.setZero ();
       matrix3_t I3; I3.setIdentity ();
       result.push_back (NumericalConstraint::create (Position::create
 			(robot, joint1, zero, M1.getTranslation (), I3,
 			 boost::assign::list_of (false)(false)(true))));
+      result.back ()->function ().context (STABILITY_CONTEXT);
       return result;
     }
 
@@ -139,6 +146,7 @@ namespace hpp {
           ComparisonTypes::create (comps)
           );
       result.push_back (nm);
+      result.back ()->function ().context (STABILITY_CONTEXT);
       // Orientation of the right foot
       matrix3_t reference;
       reference.setIdentity ();
@@ -146,21 +154,25 @@ namespace hpp {
           Orientation::create (robot, joint2, reference,
             list_of (true)(true)(false)));
       result.push_back(nm);
+      result.back ()->function ().context (STABILITY_CONTEXT);
       // Orientation of the left foot
       nm = NumericalConstraint::create (
           Orientation::create (robot, joint1, reference,
             list_of (true)(true)(false)));
       result.push_back (nm);
+      result.back ()->function ().context (STABILITY_CONTEXT);
       // Position of the right foot
         nm = NumericalConstraint::create (
           Position::create (robot, joint2, zero, M2.getTranslation (), I3,
 			    boost::assign::list_of (false)(false)(true)));
       result.push_back (nm);
+      result.back ()->function ().context (STABILITY_CONTEXT);
       // Position of the left foot
       nm = NumericalConstraint::create (
           Position::create (robot, joint1, zero, M1.getTranslation (), I3,
 			    boost::assign::list_of (false)(false)(true)));
       result.push_back (nm);
+      result.back ()->function ().context (STABILITY_CONTEXT);
       return result;
     }
   } // namespace wholebodyStep

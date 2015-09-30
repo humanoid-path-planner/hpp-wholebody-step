@@ -28,6 +28,8 @@
 
 namespace hpp {
   namespace wholebodyStep {
+    extern const std::string STABILITY_CONTEXT;
+
     /// Create quasi-static stability constraints
     /// \param robot the robot,
     /// \param comc a hpp::model::CenterOfMassComputation that handle
