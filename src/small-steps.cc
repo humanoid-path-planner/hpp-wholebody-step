@@ -139,7 +139,12 @@ namespace hpp {
       value_type length = path->length ();
       bool finished = false;
       bool stepLeft;
+      FootPrint rfp = footPrintAtParam (path, s, true);
+      FootPrint lfp = footPrintAtParam (path, s, false);
       value_type halfStepLength = .5*maxStepLength_;
+      value_type distBetweenFeetAtDoubleSupport =
+        sqrt (halfStepLength*halfStepLength +
+            (rfp.position - lfp.position).squaredNorm());
       while (!finished) {
         FootPrint rfp = footPrintAtParam (path, s, true);
         FootPrint lfp = footPrintAtParam (path, s, false);
@@ -168,31 +173,31 @@ namespace hpp {
 	  // Compute position of both feet at s_next
           FootPrint rfp_next = footPrintAtParam (path, s_next, true);
           FootPrint lfp_next = footPrintAtParam (path, s_next, false);
-	  value_type drf = (rfp.position - rfp_next.position).norm ();
-	  value_type dlf = (lfp.position - lfp_next.position).norm ();
 
-	  if ((halfStepLength - eps < dlf) && (dlf < halfStepLength + eps)
-	      && (halfStepLength - eps < drf) && (drf < halfStepLength + eps)) {
-	    found = true;
-	  } else if (dlf > halfStepLength) {
-	    value_type s_next = s + (halfStepLength/dlf) * (s_next - s);
-	  } else if (drf > halfStepLength) {
-	    value_type s_next = s + (halfStepLength/drf) * (s_next - s);
-	  } else if (dlf < halfStepLength) {
-	    if (s_next == length) {
-	      found = true;
-	    } else {
-	      value_type s_next = std::min
-		(length, s + (halfStepLength/dlf) * (s_next - s));
-	    }
-	  } else if (drf < halfStepLength) {
-	    if (s_next == length) {
-	      found = true;
-	    } else {
-	      value_type s_next = std::min
-		(length, s + (halfStepLength/drf) * (s_next - s));
-	    }
-	  }
+          value_type err;
+          if (stepLeft) {
+            /// The right foot is on the ground and we are looking for the next
+            /// left foot position.
+            /// Find a position not too far from the last right foot position.
+            err = (rfp.position - lfp_next.position).norm ()
+              - distBetweenFeetAtDoubleSupport;
+          } else {
+            err = (lfp.position - rfp_next.position).norm ()
+              - distBetweenFeetAtDoubleSupport;
+          }
+
+          if (std::abs (err) < eps) {
+            found = true; /// s_next is accepted
+          } else {
+            if (err < 0 && s_next == length)
+              found = true;
+            else {
+              s_next = std::min (length, s_next - err);
+              if (s_next < s)
+                throw std::runtime_error ("Step parameter cannot decrease.");
+            }
+          }
+
           if (found) {
             rfp = rfp_next;
             lfp = lfp_next;
@@ -326,6 +331,7 @@ namespace hpp {
           // Prepare next iteration
           p = footPrints_.size ();
         }
+        nbTries++; 
       }
       return opted;
     }
