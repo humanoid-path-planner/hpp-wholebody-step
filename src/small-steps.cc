@@ -42,6 +42,7 @@
 
 #include <hpp/wholebody-step/time-dependant.hh>
 #include <hpp/wholebody-step/time-dependant-path.hh>
+#include <hpp/wholebody-step/static-stability-constraint.hh> // STABILITY_CONTEXT
 
 namespace hpp {
   namespace wholebodyStep {
@@ -403,14 +404,13 @@ namespace hpp {
           (new FootPathToFootPos (pg_->rightFoot (), pg_->rightFootTrajectory (), ankleShift))
           );
 
-      ConfigProjectorPtr_t oldProj = path->pathAtRank (0)->constraints()->configProjector ();
-      ConfigProjectorPtr_t proj = ConfigProjector::create (robot_, "stepper-walkgen",
-          oldProj->errorThreshold (), oldProj->maxIterations ());
+      // TODO: handle the case where each subpath has its own constraints.
+      ConstraintSetPtr_t constraints = copyNonStabilityConstraints
+        (path->pathAtRank (0)->constraints());
+      ConfigProjectorPtr_t proj = constraints->configProjector ();
       proj->add (comEq);
       proj->add (leftEq);
       proj->add (rightEq);
-      ConstraintSetPtr_t constraints = ConstraintSet::create (robot_, "stepper-walkgen-set");
-      constraints->addConstraint (proj);
 
       PathVectorPtr_t opted = PathVector::create (path->outputSize (),
           path->outputDerivativeSize ());
@@ -446,6 +446,45 @@ namespace hpp {
         qi = qe;
       }
       return opted;
+    }
+
+    ConstraintSetPtr_t SmallSteps::copyNonStabilityConstraints (ConstraintSetPtr_t orig) const
+    {
+      ConstraintSetPtr_t ret =
+        ConstraintSet::create (robot_, "stepper-walkgen-set");
+      ConfigProjectorPtr_t oldProj = orig->configProjector ();
+      assert (oldProj && "There is no ConfigProjector in the path so I do not "
+          "know what error threshold and max iteration to use.");
+      ConfigProjectorPtr_t newProj =
+        ConfigProjector::create (robot_, "stepper-walkgen",
+          oldProj->errorThreshold (), oldProj->maxIterations ());
+
+      ret->addConstraint (newProj);
+
+      /// Copy the numerical constraints
+      core::NumericalConstraints_t nc = oldProj->numericalConstraints ();
+      core::IntervalsContainer_t pd = oldProj->passiveDofs ();
+      core::NumericalConstraints_t::const_iterator it;
+      core::IntervalsContainer_t::const_iterator itPdofs = pd.begin ();
+      for (it = nc.begin (); it != nc.end (); ++it) {
+        if ((*it)->function().context () != STABILITY_CONTEXT) {
+          newProj->add (*it, *itPdofs);
+        }
+        itPdofs++;
+      }
+      /// Copy the locked joints
+      core::LockedJoints_t lj = oldProj->lockedJoints ();
+      for (core::LockedJoints_t::const_iterator it = lj.begin ();
+          it != lj.end (); ++it)
+        newProj->add (*it);
+
+      /// Copy the other constraints
+      for (core::Constraints_t::const_iterator it = orig->begin ();
+          it != orig->end (); ++it) {
+        if (*it != oldProj)
+          ret->addConstraint (*it);
+      }
+      return ret;
     }
   } // wholebodyStep
 } // namespace hpp

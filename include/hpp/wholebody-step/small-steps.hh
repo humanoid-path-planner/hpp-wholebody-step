@@ -76,6 +76,8 @@ namespace hpp {
           const TimeToParameterMap_t& TTP, CubicBSplinePtr_t com,
           value_type comHeight, value_type ankleShift
           );
+      ConstraintSetPtr_t copyNonStabilityConstraints (ConstraintSetPtr_t orig)
+        const;
 
       HumanoidRobotPtr_t robot_;
       value_type minStepLength_;
