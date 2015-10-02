@@ -92,42 +92,41 @@ namespace hpp {
           for (TimeDependants_t::const_iterator it = tds_.begin ();
               it != tds_.end (); ++it)
             it->rhsAbscissa (y);
-          if (constraints_ && constraints_->configProjector ())
-              constraints_->configProjector ()->updateRightHandSide ();
+          if (constraints() && constraints()->configProjector ())
+              constraints()->configProjector ()->updateRightHandSide ();
         }
 
       protected:
         TimeDependantPath (const core::PathPtr_t path) :
           Path (path->timeRange (), path->outputSize (),
               path->outputDerivativeSize ()),
-          path_ (path->copy ()), constraints_ (), a_ (1), b_(0)
+          path_ (path->copy ()), a_ (1), b_(0)
         {}
 
         TimeDependantPath (const core::PathPtr_t path, const ConstraintSetPtr_t& c) :
           Path (path->timeRange (), path->outputSize (),
               path->outputDerivativeSize ()),
-          path_ (path->copy ()), constraints_ (c), a_ (1), b_(0)
+          path_ (path->copy ()), a_ (1), b_(0)
         {
+          constraints (c);
         }
 
         TimeDependantPath (const TimeDependantPath &other) :
           Path (other), path_ (other.path_->copy ()),
-          constraints_ (other.constraints_), a_ (other.a_), b_(other.b_)
+          a_ (other.a_), b_(other.b_)
         {}
 
         TimeDependantPath (const TimeDependantPath &other, const ConstraintSetPtr_t& c) :
           Path (other), path_ (other.path_->copy ()),
-          constraints_ (c), a_ (other.a_), b_(other.b_)
+          a_ (other.a_), b_(other.b_)
         {
+          constraints (c);
         }
 
         virtual bool impl_compute (ConfigurationOut_t config, value_type t) const
         {
           updateAbscissa (t);
-          if (!(*path_) (config, t))
-            return false;
-          if (!constraints_) return true;
-          return constraints_->apply (config);
+          return (*path_) (config, t);
         }
 
         void init (const TimeDependantPathPtr_t& self)
@@ -148,7 +147,6 @@ namespace hpp {
         typedef std::vector <TimeDependant> TimeDependants_t;
 
         core::PathPtr_t path_;
-        ConstraintSetPtr_t constraints_;
         TimeDependants_t tds_;
         value_type a_, b_;
     }; // class TimeDependantPath
