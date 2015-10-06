@@ -50,5 +50,6 @@ ADD_REQUIRED_DEPENDENCY("hpp-walkgen >= 0.1")
 # Add dependency toward hpp-wholebody-step library in pkg-config file.
 PKG_CONFIG_APPEND_LIBS("hpp-wholebody-step")
 ADD_SUBDIRECTORY(src)
+ADD_SUBDIRECTORY(tests EXCLUDE_FROM_ALL)
 
 SETUP_PROJECT_FINALIZE()
