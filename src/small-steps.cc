@@ -95,7 +95,7 @@ namespace hpp {
       {
         JointPtr_t foot = dev->getJointByName ("foot");
         sf_ = JointFrameFunction::create ("fake-device-foot", dev,
-            JointFrame::create (JointFrame (foot))
+            JointFrame::create (foot)
             );
       }
 
@@ -385,20 +385,20 @@ namespace hpp {
       comComp->add (robot_->rootJoint());
       comComp->computeMass ();
       PointComFunctionPtr_t comFunc = PointComFunction::create ("COM-walkgen",
-          robot_, PointCom::create (PointCom (comComp)));
+          robot_, PointCom::create (comComp));
       NumericalConstraintPtr_t comEq = NumericalConstraint::create (comFunc, equals);
       TimeDependant comEqTD (comEq, RightHandSideFunctorPtr_t (new CubicBSplineToCom (com, comHeight)));
 
       // Create an time varying equation for each foot.
       JointFrameFunctionPtr_t leftFunc = JointFrameFunction::create ("left-foot-walkgen",
-          robot_, JointFrame::create (JointFrame (robot_->leftAnkle ())));
+          robot_, JointFrame::create (robot_->leftAnkle ()));
       NumericalConstraintPtr_t leftEq = NumericalConstraint::create (leftFunc, equals);
       TimeDependant leftEqTD (leftEq, RightHandSideFunctorPtr_t
           (new FootPathToFootPos (pg_->leftFoot (), pg_->leftFootTrajectory (), ankleShift))
           );
 
       JointFrameFunctionPtr_t rightFunc = JointFrameFunction::create ("right-foot-walkgen",
-          robot_, JointFrame::create (JointFrame (robot_->rightAnkle ())));
+          robot_, JointFrame::create (robot_->rightAnkle ()));
       NumericalConstraintPtr_t rightEq = NumericalConstraint::create (rightFunc, equals);
       TimeDependant rightEqTD (rightEq, RightHandSideFunctorPtr_t
           (new FootPathToFootPos (pg_->rightFoot (), pg_->rightFootTrajectory (), ankleShift))

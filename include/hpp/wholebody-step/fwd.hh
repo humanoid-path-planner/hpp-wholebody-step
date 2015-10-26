@@ -39,7 +39,7 @@ namespace hpp {
     typedef core::DifferentiableFunctionPtr_t DifferentiableFunctionPtr_t;
     typedef core::DifferentiableFunction DifferentiableFunction;
     typedef constraints::JointFrame JointFrame;
-    typedef constraints::JointFrame::Ptr_t JointFramePtr_t;
+    typedef constraints::Traits<constraints::JointFrame>::Ptr_t JointFramePtr_t;
     typedef constraints::SymbolicFunction<JointFrame> JointFrameFunction;
     typedef constraints::SymbolicFunction<JointFrame>::Ptr_t JointFrameFunctionPtr_t;
     typedef constraints::PointCom PointCom;
