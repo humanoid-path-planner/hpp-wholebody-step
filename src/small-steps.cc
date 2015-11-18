@@ -262,19 +262,26 @@ namespace hpp {
         pg_->footPrintSequence (footPrints_);
         CubicBSplinePtr_t com = pg_->solve ();
 
-        opted = generateOptimizedPath (path, param.pairs_, com, comH, ankleShift);
-
-        core::PathValidationPtr_t pv = problem().pathValidation ();
-        PathPtr_t unused;
-        core::PathValidationReportPtr_t report;
-        valid = pv->validate (opted, false, unused, report);
+        value_type failureP = -1;
+        opted = generateOptimizedPath (path, param.pairs_, com, comH, ankleShift,
+            failureP);
+        valid = (failureP < 0);
+        if (valid) {
+          core::PathValidationPtr_t pv = problem().pathValidation ();
+          PathPtr_t unused;
+          core::PathValidationReportPtr_t report;
+          valid = pv->validate (opted, false, unused, report);
+          if (!valid) {
+            assert (report);
+            failureP = report->parameter;
+          }
+        }
         if (!valid) {
           typedef std::vector <value_type> SPs_t; // Step parameters
-          assert (report);
           // Find step parameter before and after collision
           SPs_t::iterator itStepA = // before
             std::lower_bound (stepParameters_.begin (), stepParameters_.end (),
-                param (report->parameter));
+                param (failureP));
           SPs_t::iterator itStepB = itStepA; // after
           --itStepB; --itStepB;
           ++itStepA;
@@ -373,7 +380,8 @@ namespace hpp {
 
     PathVectorPtr_t SmallSteps::generateOptimizedPath (PathVectorPtr_t path,
         const TimeToParameterMap_t& TTP, CubicBSplinePtr_t com,
-        value_type comHeight, value_type ankleShift)
+        value_type comHeight, value_type ankleShift,
+        value_type& failureParameter)
     {
       assert (robot_);
 
@@ -429,7 +437,10 @@ namespace hpp {
         }
         proj->updateRightHandSide ();
         bool success = constraints->apply (qe);
-        assert (success);
+        if (!success) {
+          failureParameter = T;
+          return path;
+        }
         if (lastT >= 0) {
           TimeDependantPathPtr_t p = TimeDependantPath::create
             (StraightPath::create (robot_,qi,qe,T - lastT), constraints);

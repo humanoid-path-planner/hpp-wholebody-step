@@ -74,8 +74,8 @@ namespace hpp {
       /// (contained in the member pg_)
       PathVectorPtr_t generateOptimizedPath (const PathVectorPtr_t path,
           const TimeToParameterMap_t& TTP, CubicBSplinePtr_t com,
-          value_type comHeight, value_type ankleShift
-          );
+          value_type comHeight, value_type ankleShift,
+          value_type& failureParameter);
       ConstraintSetPtr_t copyNonStabilityConstraints (ConstraintSetPtr_t orig)
         const;
 
