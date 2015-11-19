@@ -104,7 +104,7 @@ namespace hpp {
         if (!(*path_) (tmp, input))
           throw std::runtime_error ("Could not apply constraints");
         (*sf_) (result, tmp);
-        result[2] += shiftH_;
+        result[2] -= shiftH_;
       }
     };
 
@@ -358,7 +358,7 @@ namespace hpp {
       xf = a->currentTransformation ().getTranslation () [0];
       yf = a->currentTransformation ().getTranslation () [1];
       cf = a->currentTransformation ().getRotation () (0,0);
-      sf = a->currentTransformation ().getRotation () (0,1);
+      sf = a->currentTransformation ().getRotation () (1,0);
       return FootPrint (xf, yf, cf, sf);
     }
 
