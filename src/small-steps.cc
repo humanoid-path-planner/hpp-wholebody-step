@@ -233,7 +233,13 @@ namespace hpp {
       }
       getStepParameters (path);
       // Create pattern generator with height of center of mass
-      value_type comH = robot_->positionCenterOfMass () [2];
+      model::CenterOfMassComputationPtr_t comComp = model::CenterOfMassComputation::
+        create (robot_);
+      comComp->add (robot_->waist()->parentJoint ());
+      comComp->computeMass ();
+      comComp->compute (model::Device::COM);
+
+      value_type comH = comComp->com () [2];
       value_type ankleShift = robot_->leftAnkle()->currentTransformation ().getTranslation () [2];
       assert (std::abs (ankleShift - robot_->rightAnkle()->currentTransformation ().getTranslation () [2])
           < Eigen::NumTraits<value_type>::dummy_precision());
@@ -390,7 +396,7 @@ namespace hpp {
       // Create the time varying equation for COM
       model::CenterOfMassComputationPtr_t comComp = model::CenterOfMassComputation::
         create (robot_);
-      comComp->add (robot_->rootJoint());
+      comComp->add (robot_->waist()->parentJoint ());
       comComp->computeMass ();
       PointComFunctionPtr_t comFunc = PointComFunction::create ("COM-walkgen",
           robot_, PointCom::create (comComp));
