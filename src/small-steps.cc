@@ -241,8 +241,10 @@ namespace hpp {
 
       value_type comH = comComp->com () [2];
       value_type ankleShift = robot_->leftAnkle()->currentTransformation ().getTranslation () [2];
-      assert (std::abs (ankleShift - robot_->rightAnkle()->currentTransformation ().getTranslation () [2])
-          < Eigen::NumTraits<value_type>::dummy_precision());
+      if (std::abs (ankleShift - robot_->rightAnkle()->currentTransformation ().getTranslation () [2]) > 1e-6) {
+        hppDout (error, "Left and right ankle are not at the same height. Difference is "
+            << std::abs (ankleShift - robot_->rightAnkle()->currentTransformation ().getTranslation () [2]));
+      }
       pg_ = SplineBased::create (comH);
       pg_->defaultStepHeight (defaultStepHeight_);
       bool valid = false;
@@ -305,15 +307,16 @@ namespace hpp {
           stepParameters_.insert (itStepB + 1, newSPs.begin (), newSPs.end ());
           for (std::size_t i = 0; i < 4; ++i)
             stepParameters_[ib_sp + i] = stepParameters_[ib_sp - 1 + i] + step;
-          // stepParameters_[ib_sp + 0] = stepParameters_[ib_sp - 1] + step;
-          // stepParameters_[ib_sp + 1] = stepParameters_[ib_sp - 0] + step;
-          // stepParameters_[ib_sp + 2] = stepParameters_[ib_sp + 1] + step;
-          // stepParameters_[ib_sp + 3] = stepParameters_[ib_sp + 2] + step;
-          assert (std::abs (stepParameters_[ib_sp + 4] - stepParameters_[ib_sp + 3] - step) < 1e-6);
+          if (std::abs (stepParameters_[ib_sp + 4] - stepParameters_[ib_sp + 3] - step) > 1e-6) {
+            hppDout (error, "Step parameters are not consistent: "
+                << std::abs (stepParameters_[ib_sp + 4] - stepParameters_[ib_sp + 3] - step));
+          }
           //footPrintsIsRight_[ib_fp + 0] =  footPrintsIsRight_[ib_fp + 0];
           footPrintsIsRight_[ib_fp + 1] = !footPrintsIsRight_[ib_fp + 0];
           footPrintsIsRight_[ib_fp + 2] =  footPrintsIsRight_[ib_fp + 0];
-          assert (footPrintsIsRight_[ib_fp + 3] == !footPrintsIsRight_[ib_fp + 0]);
+          if (footPrintsIsRight_[ib_fp + 3] == footPrintsIsRight_[ib_fp + 0]) {
+           hppDout (error, "Foot step should be alternate between right and left.");
+          }
 
           FootPrints_t newFPs (2, footPrints_ [ib_fp]);
           footPrints_.insert (itFPB + 1, newFPs.begin (), newFPs.end ());
