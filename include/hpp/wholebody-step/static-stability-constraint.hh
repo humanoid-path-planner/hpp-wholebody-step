@@ -65,6 +65,28 @@ namespace hpp {
     (const DevicePtr_t& robot, const JointPtr_t& leftAnkle, 
      const JointPtr_t& rightAnkle, ConfigurationIn_t configuration);
 
+    /// Create quasi-static stability complementary constraints
+    /// \param robot the robot,
+    /// \param comc a hpp::model::CenterOfMassComputation that handle
+    ///        COM computations.
+    /// \param leftAnkle left ankle joint,
+    /// \param rightAnkle right ankle joint,
+    /// \param configuration the configuration of the robot satisfying
+    ///        the constraint,
+    ///
+    /// Used with the quasi-static stability constraints, the constraints 
+    /// make the feet and the center of mass of the robot at a constant 
+    /// position. Two constraints are returned:
+    /// \li orientation of the left foot (dimension 1),
+    /// \li position of the left foot (dimension 2).
+    ///
+    /// All constraints are returned along with the
+    /// hpp::core::ComparisonType::createDefault()
+    std::vector <NumericalConstraintPtr_t> createSlidingStabilityConstraintComplement
+    (const DevicePtr_t& robot, const CenterOfMassComputationPtr_t& comc,
+     const JointPtr_t& leftAnkle, const JointPtr_t& rightAnkle,
+     ConfigurationIn_t configuration);
+
     /// Constraints that ensure that the COM is between the two ankles
     /// \param robot the robot,
     /// \param comc a hpp::model::CenterOfMassComputation that handle

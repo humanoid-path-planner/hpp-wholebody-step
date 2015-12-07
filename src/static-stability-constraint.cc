@@ -116,6 +116,36 @@ namespace hpp {
       return result;
     }
 
+    std::vector <NumericalConstraintPtr_t> createSlidingStabilityConstraintComplement
+    (const DevicePtr_t& robot, const CenterOfMassComputationPtr_t& comc,
+     const JointPtr_t& leftAnkle, const JointPtr_t& rightAnkle,
+     ConfigurationIn_t configuration)
+    {
+      std::vector <NumericalConstraintPtr_t> result;
+      robot->currentConfiguration (configuration);
+      robot->computeForwardKinematics ();
+      comc->compute (model::Device::COM);
+      JointPtr_t joint1 = leftAnkle;
+      JointPtr_t joint2 = rightAnkle;
+      const Transform3f& M1 = joint1->currentTransformation ();
+      matrix3_t reference;
+
+      // Orientation of the left foot
+      reference.setIdentity ();
+      result.push_back (NumericalConstraint::create (Orientation::create
+            (robot, joint1, reference, boost::assign::list_of
+			      (false)(false)(true))));
+      result.back ()->function ().context (STABILITY_CONTEXT);
+      // Position of the left foot
+      vector3_t zero; zero.setZero ();
+      matrix3_t I3; I3.setIdentity ();
+      result.push_back (NumericalConstraint::create (Position::create
+			(robot, joint1, zero, M1.getTranslation (), I3,
+			 boost::assign::list_of (true)(true)(false))));
+      result.back ()->function ().context (STABILITY_CONTEXT);
+      return result;
+    }
+
     std::vector <NumericalConstraintPtr_t> createAlignedCOMStabilityConstraint
     (const DevicePtr_t& robot, const CenterOfMassComputationPtr_t& comc,
      const JointPtr_t& leftAnkle, const JointPtr_t& rightAnkle,
