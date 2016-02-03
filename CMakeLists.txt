@@ -47,9 +47,10 @@ ADD_DOC_DEPENDENCY("hpp-constraints >= 3")
 ADD_REQUIRED_DEPENDENCY("hpp-core >= 3")
 ADD_REQUIRED_DEPENDENCY("hpp-walkgen")
 
-# Add dependency toward hpp-wholebody-step library in pkg-config file.
-PKG_CONFIG_APPEND_LIBS("hpp-wholebody-step")
 ADD_SUBDIRECTORY(src)
 ADD_SUBDIRECTORY(tests EXCLUDE_FROM_ALL)
+
+# Add dependency toward hpp-wholebody-step library in pkg-config file.
+PKG_CONFIG_APPEND_LIBS("hpp-wholebody-step")
 
 SETUP_PROJECT_FINALIZE()
