@@ -78,6 +78,8 @@ namespace hpp {
           value_type& failureParameter);
       ConstraintSetPtr_t copyNonStabilityConstraints (ConstraintSetPtr_t orig)
         const;
+      void narrowAtTime (const value_type& t, const PathPtr_t& path,
+          const PiecewiseAffine& param, Times_t& times);
 
       HumanoidRobotPtr_t robot_;
       value_type minStepLength_;

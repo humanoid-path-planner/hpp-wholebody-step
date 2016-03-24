@@ -46,6 +46,42 @@
 
 namespace hpp {
   namespace wholebodyStep {
+    namespace {
+      typedef std::map <value_type, value_type> TimeToParameterMap_t;
+      void print_steps (const TimeToParameterMap_t& param,
+                        const SmallSteps::FootPrints_t& footPrints,
+                        const CubicBSplinePtr_t& com,
+                        const std::size_t n) {
+        hppDout (info, "## Start foot steps - Python ##");
+        if (n == 0) {
+          hppDout (info, "time_param = list ()");
+          hppDout (info, "footPrint  = list ()");
+          hppDout (info, "com  = list ()");
+        }
+        hppDout (info, "time_param.append(list ())");
+        hppDout (info, "footPrint.append(list ())");
+        hppDout (info, "com.append(list ())");
+        for (TimeToParameterMap_t::const_iterator it = param.begin ();
+            it != param.end (); ++it)
+          hppDout (info, "time_param[" << n << "].append ([ "
+              << it->first << ", " << it->second << " ])");
+        for (SmallSteps::FootPrints_t::const_iterator it = footPrints.begin ();
+            it != footPrints.end (); ++it)
+          hppDout (info, "footPrint[" << n << "].append ([ "
+              << it->position[0] << ", " << it->position[1] << ", "
+              << it->orientation[0] << ", " << it->orientation[1] << " ])");
+        vector_t res(2);
+        const value_type step = (com->timeRange ().second - com->timeRange ().first) / 100;
+        for (value_type t = com->timeRange ().first;
+            t < com->timeRange ().second; t += step) {
+          (*com) (res, t);
+          hppDout (info, "com[" << n << "].append ([ "
+              << t << ", " << res[0] << ", " << res[1] << " ])");
+        }
+        hppDout (info, "## Stop foot steps - Python ##");
+      }
+    }
+
     value_type SmallSteps::PiecewiseAffine::operator () (const value_type& t) const
     {
       Pairs_t::const_iterator it = pairs_.lower_bound (t);
@@ -271,6 +307,7 @@ namespace hpp {
         CubicBSplinePtr_t com = pg_->solve ();
 
         value_type failureP = -1;
+        print_steps (param.pairs_, footPrints_, com, nbTries);
         opted = generateOptimizedPath (path, param.pairs_, com, comH, ankleShift,
             failureP);
         valid = (failureP < 0);
@@ -285,66 +322,7 @@ namespace hpp {
           }
         }
         if (!valid) {
-          typedef std::vector <value_type> SPs_t; // Step parameters
-          // Find step parameter before and after collision
-          SPs_t::iterator itStepA = // before
-            std::lower_bound (stepParameters_.begin (), stepParameters_.end (),
-                param (failureP));
-          SPs_t::iterator itStepB = itStepA; // after
-          --itStepB; --itStepB;
-          ++itStepA;
-          std::size_t ib_sp = std::distance (stepParameters_.begin (), itStepB) + 1;
-
-          // Update the step parameters and footprints
-          std::size_t ib_fp = ib_sp + 1;
-          FootPrints_t::iterator itFPB = footPrints_.begin (); std::advance (itFPB, ib_fp);
-          std::vector<bool>::iterator itFPiRB = footPrintsIsRight_.begin (); std::advance (itFPiRB, ib_fp);
-          value_type step = (*itStepA - *itStepB ) / 5;
-
-          std::vector<bool> newFPiRs(2);
-          SPs_t newSPs(2);
-          footPrintsIsRight_.insert (itFPiRB + 1, newFPiRs.begin (), newFPiRs.end ());
-          stepParameters_.insert (itStepB + 1, newSPs.begin (), newSPs.end ());
-          for (std::size_t i = 0; i < 4; ++i)
-            stepParameters_[ib_sp + i] = stepParameters_[ib_sp - 1 + i] + step;
-          if (std::abs (stepParameters_[ib_sp + 4] - stepParameters_[ib_sp + 3] - step) > 1e-6) {
-            hppDout (error, "Step parameters are not consistent: "
-                << std::abs (stepParameters_[ib_sp + 4] - stepParameters_[ib_sp + 3] - step));
-          }
-          //footPrintsIsRight_[ib_fp + 0] =  footPrintsIsRight_[ib_fp + 0];
-          footPrintsIsRight_[ib_fp + 1] = !footPrintsIsRight_[ib_fp + 0];
-          footPrintsIsRight_[ib_fp + 2] =  footPrintsIsRight_[ib_fp + 0];
-          if (footPrintsIsRight_[ib_fp + 3] == footPrintsIsRight_[ib_fp + 0]) {
-           hppDout (error, "Foot step should be alternate between right and left.");
-          }
-
-          FootPrints_t newFPs (2, footPrints_ [ib_fp]);
-          footPrints_.insert (itFPB + 1, newFPs.begin (), newFPs.end ());
-          for (std::size_t i = 0; i < 4; ++i) {
-            footPrints_[ib_fp + i] = footPrintAtParam
-              (path, stepParameters_[ib_sp + i], footPrintsIsRight_[ib_fp + i]);
-          }
-
-          // Update times
-          // Linearly interpolate between the times corresponding to the two last steps.
-          // ib_times is the first DD time that should decrease.
-          std::size_t ib_times = 2 * ib_sp;
-          const value_type ratio = defaultSingleSupportTime_ / defaultDoubleSupportTime_;
-          const value_type interval = times[ib_times+3] - times[ib_times-1];
-          Times_t::iterator itTimesB = times.begin (); std::advance (itTimesB, ib_times);
-          Times_t newTimes (4);
-          times.insert (itTimesB + 1, newTimes.begin(), newTimes.end ());
-
-          // interval = 4 * newSST + 4 * newDST
-          // ratio    = newSST / newDST
-          value_type newDST = ( interval / 4 ) / ( 1 + 1 * ratio );
-          value_type newSST = ( interval / 4 ) - newDST;
-          for (std::size_t i = 0; i < 4; ++i) {
-            times[ib_times + 2*i    ] = times[ib_times + 2*i - 1] + newSST;
-            times[ib_times + 2*i + 1] = times[ib_times + 2*i    ] + newDST;
-          }
-          // assert (times[ib_times + 1] == newTimes[3] + newSST)
-
+          narrowAtTime (failureP, path, param, times);
           // Prepare next iteration
           p = footPrints_.size ();
         }
@@ -505,6 +483,167 @@ namespace hpp {
           ret->addConstraint (*it);
       }
       return ret;
+    }
+
+    void SmallSteps::narrowAtTime (const value_type& invalid_time, const PathPtr_t& path,
+        const PiecewiseAffine& param, Times_t& times)
+    {
+      typedef std::vector <value_type> SPs_t; // Step parameters
+      enum Phase {
+        FIRST_INIT,
+        FIRST_SINGLE_SUPPORT,
+        MIDDLE_PHASE,
+        LAST_SINGLE_SUPPORT,
+        LAST_INIT
+      };
+
+      // Find in which phase we are
+      const value_type timeInPath = param(invalid_time);
+      Times_t::iterator _time =
+        std::lower_bound (times.begin(), times.end(), invalid_time);
+      // i_time >= 1
+      const std::size_t i_time = std::distance (times.begin(), _time);
+      const std::size_t nb_time = times.size();
+      Phase phase = MIDDLE_PHASE;
+      assert (i_time > 0 && i_time <= nb_time);
+      if      (i_time == 0) throw std::runtime_error ("Error");
+      else if (i_time == 1)             phase = FIRST_INIT;
+      else if (i_time == 2)             phase = FIRST_SINGLE_SUPPORT;
+      else if (i_time == nb_time - 1)   phase = LAST_SINGLE_SUPPORT;
+      else if (i_time == nb_time)       phase = LAST_INIT;
+      else                              phase = MIDDLE_PHASE;
+
+      // Find step parameter before and after collision
+      SPs_t::iterator _step = std::lower_bound
+        (stepParameters_.begin (), stepParameters_.end (), timeInPath);
+      SPs_t::iterator _step_After = _step, _step_Before = _step;
+      switch (phase) {
+        case FIRST_INIT:
+        case FIRST_SINGLE_SUPPORT:
+          _step_Before = _step_After = stepParameters_.begin ();
+          std::advance (_step_After, 1);
+          break;
+        case MIDDLE_PHASE:
+          std::advance (_step_Before, -2);
+          if (_step_After + 1 != stepParameters_.end())
+            std::advance (_step_After ,  1);
+          break;
+        case LAST_SINGLE_SUPPORT:
+        case LAST_INIT:
+          // Untested
+          _step_Before = _step_After = stepParameters_.end ();
+          std::advance (_step_Before, -2);
+          std::advance (_step_After , -1);
+          break;
+      }
+      // First step parameter to update
+      const std::size_t ib_sp = std::distance (stepParameters_.begin (), _step_Before) + 1;
+      // First foot print to update
+      const std::size_t ib_fp = ib_sp + 1;
+      // Time between the unchanged steps
+      const value_type stepUnchanged = (*_step_After - *_step_Before );
+      assert (stepUnchanged > 0);
+
+      // Update the step parameters and footprints
+      FootPrints_t::iterator _FP_Before = footPrints_.begin (); std::advance (_FP_Before, ib_fp);
+      std::vector<bool>::iterator _FPiR_Before = footPrintsIsRight_.begin (); std::advance (_FPiR_Before, ib_fp);
+
+      // Add two steps
+      std::vector<bool> newFPiRs(2);
+      SPs_t newSPs(2);
+      footPrintsIsRight_.insert (_FPiR_Before + 1, newFPiRs.begin (), newFPiRs.end ());
+      stepParameters_.insert (_step_Before + 1, newSPs.begin (), newSPs.end ());
+
+      const std::size_t nbStep = std::distance(_step_Before, _step_After);
+      const value_type step = stepUnchanged / ( nbStep + 2);
+      for (std::size_t i = 0; i < nbStep + 1; ++i)
+        stepParameters_[ib_sp + i] = stepParameters_[ib_sp - 1 + i] + step;
+      if (std::abs (stepParameters_[ib_sp + nbStep + 1] - stepParameters_[ib_sp + nbStep] - step) > 1e-6) {
+        hppDout (error, "Step parameters are not consistent: "
+            << std::abs (stepParameters_[ib_sp + nbStep + 1] - stepParameters_[ib_sp + nbStep] - step));
+      }
+      for (std::size_t i = 0; i < nbStep + 1; ++i)
+        footPrintsIsRight_[ib_fp + i] = !footPrintsIsRight_[ib_fp + i - 1];
+      if (footPrintsIsRight_[ib_fp + nbStep] == footPrintsIsRight_[ib_fp + 0]) {
+        hppDout (error, "Foot step should alternate between right and left.");
+      }
+      assert (std::adjacent_find (stepParameters_.begin (), stepParameters_.end(), std::greater_equal<double>()) == stepParameters_.end());
+
+      FootPrints_t newFPs (2, footPrints_ [ib_fp]);
+      footPrints_.insert (_FP_Before + 1, newFPs.begin (), newFPs.end ());
+      for (std::size_t i = 0; i < nbStep + 1; ++i) {
+        footPrints_[ib_fp + i] = footPrintAtParam
+          (path, stepParameters_[ib_sp + i], footPrintsIsRight_[ib_fp + i]);
+      }
+
+      // Update times
+      // Linearly interpolate between the times corresponding to the two last steps.
+      // ib_times is the first DD time that should decrease.
+      Times_t newTimes (4);
+      const value_type ratioSSDS = defaultSingleSupportTime_ / defaultDoubleSupportTime_;
+      const value_type ratioIDS = defaultInitializationTime_ / defaultDoubleSupportTime_;
+
+      switch (phase) {
+        case FIRST_INIT:
+        case FIRST_SINGLE_SUPPORT:
+          {
+            const value_type interval = times[4] - times[0];
+            Times_t::iterator itTimesB = times.begin ();
+            times.insert (itTimesB + 1, newTimes.begin(), newTimes.end ());
+            // interval  = newIT + 4 * newSST + 3 * newDST
+            // ratioSSDS = newSST / newDST
+            // ratioIDS  = newIT / newDST
+            const value_type newDST = interval / ( ratioIDS + 4 * ratioSSDS + 3 );
+            const value_type newSST = newDST * ratioSSDS;
+            const value_type newIT  = newDST * ratioIDS;
+            times[1] = newIT; times[2] = newIT + newSST;
+            for (std::size_t i = 1; i < 4; ++i) {
+              times[2*i + 1] = times[2*i    ] + newDST;
+              times[2*i + 2] = times[2*i + 1] + newSST; // for i == 3, this should do nothing.
+            }
+          }
+          break;
+        case MIDDLE_PHASE:
+          {
+            std::size_t ib_times = 2 * ib_sp;
+            const value_type interval = times[ib_times+3] - times[ib_times-1];
+            Times_t::iterator itTimesB = times.begin (); std::advance (itTimesB, ib_times);
+            times.insert (itTimesB + 1, newTimes.begin(), newTimes.end ());
+            // const value_type interval = times[ib_times+3] - times[ib_times-1];
+
+            // interval = 4 * newSST + 4 * newDST
+            // ratio    = newSST / newDST
+            value_type newDST = ( interval / 4 ) / ( 1 + 1 * ratioSSDS );
+            value_type newSST = ( interval / 4 ) - newDST;
+            for (std::size_t i = 0; i < 4; ++i) {
+              times[ib_times + 2*i    ] = times[ib_times + 2*i - 1] + newSST;
+              times[ib_times + 2*i + 1] = times[ib_times + 2*i    ] + newDST; // for i == 3, this should do nothing.
+            }
+            // assert (times[ib_times + 1] == newTimes[3] + newSST)
+          }
+          break;
+        case LAST_SINGLE_SUPPORT:
+        case LAST_INIT:
+          // Untested
+          {
+            const value_type interval = times[nb_time - 5] - times[nb_time - 1];
+            times.insert (times.end () - 1, newTimes.begin(), newTimes.end ());
+            // interval  = newIT + 4 * newSST + 3 * newDST
+            // ratioSSDS = newSST / newDST
+            // ratioIDS  = newIT / newDST
+            const value_type newDST = interval / ( ratioIDS + 4 * ratioSSDS + 3 );
+            const value_type newSST = newDST * ratioSSDS;
+            const value_type newIT  = newDST * ratioIDS;
+            const std::size_t i_start = nb_time - 9;
+            for (std::size_t i = 0; i < 3; ++i) {
+              times[i_start + 2*i + 1] = times[i_start + 2*i    ] + newSST;
+              times[i_start + 2*i + 2] = times[i_start + 2*i + 1] + newDST; // for i == 3, this should do nothing.
+            }
+            times[nb_time - 2] = times[nb_time-3] + newSST;
+            times[nb_time - 1] = times[nb_time-2] + newIT; // Should be useless
+          }
+          break;
+      }
     }
   } // wholebodyStep
 } // namespace hpp
