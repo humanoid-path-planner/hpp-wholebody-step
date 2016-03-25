@@ -113,7 +113,7 @@ namespace hpp {
 
         TimeDependantPath (const TimeDependantPath &other) :
           Path (other), path_ (other.path_->copy ()),
-          a_ (other.a_), b_(other.b_)
+          tds_ (other.tds_), a_ (other.a_), b_(other.b_)
         {}
 
         TimeDependantPath (const TimeDependantPath &other, const ConstraintSetPtr_t& c) :
