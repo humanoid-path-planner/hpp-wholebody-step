@@ -80,6 +80,17 @@ namespace hpp {
         }
         hppDout (info, "## Stop foot steps - Python ##");
       }
+
+      template <typename Container>
+      inline bool isStrictlyIncreasing (const Container& c)
+      {
+        typename Container::const_iterator b = c.begin (), e = c.end();
+        return (std::adjacent_find (b, e, std::greater_equal<double>()) == e);
+      }
+
+      template <typename Scalar>
+        inline bool isApprox (const Scalar& a, const Scalar& b, const Scalar& eps = Eigen::NumTraits<Scalar>::epsilon())
+        { return std::abs (a - b) < eps; }
     }
 
     value_type SmallSteps::PiecewiseAffine::operator () (const value_type& t) const
@@ -100,9 +111,8 @@ namespace hpp {
       }
     }
 
-    void SmallSteps::PiecewiseAffine::addPair (const value_type& t, const value_type value)
+    inline void SmallSteps::PiecewiseAffine::addPair (const value_type& t, const value_type value)
     {
-      hppDout (info, "Adding pair: " << t << ", " << value);
       pairs_ [t] = value;
     }
 
@@ -285,13 +295,13 @@ namespace hpp {
       pg_->defaultStepHeight (defaultStepHeight_);
       bool valid = false;
       std::size_t nbTries = 0;
-      PathVectorPtr_t opted;
+      PathVectorPtr_t opted, lastCollidingOpted;
 
       // Build time sequence
       std::size_t p = footPrints_.size ();
       Times_t times = buildInitialTimes (p);
 
-      while (!valid && nbTries < 50) {
+      while (!valid && nbTries < 20) {
         // Build time parameterization of initial path
         // There are two footprints per step parameter
         PiecewiseAffine param;
@@ -318,16 +328,24 @@ namespace hpp {
           valid = pv->validate (opted, false, unused, report);
           if (!valid) {
             assert (report);
+            hppDout (info, *report);
             failureP = report->parameter;
+            lastCollidingOpted = opted;
           }
         }
         if (!valid) {
-          narrowAtTime (failureP, path, param, times);
+          if (!narrowAtTime (failureP, path, param, times)) {
+            hppDout(error, "Could not narrow trajectory at time " << failureP);
+            if (lastCollidingOpted) return lastCollidingOpted;
+            else return opted;
+          }
           // Prepare next iteration
           p = footPrints_.size ();
         }
         nbTries++; 
       }
+      hppDout(info, "valid= " << valid); 
+      hppDout(info, "nbTries= " << nbTries); 
       return opted;
     }
 
@@ -426,6 +444,7 @@ namespace hpp {
         bool success = constraints->apply (qe);
         if (!success) {
           failureParameter = T;
+          hppDout (error, "Failed to project a configuration at time " << T);
           return path;
         }
         if (lastT >= 0) {
@@ -485,7 +504,7 @@ namespace hpp {
       return ret;
     }
 
-    void SmallSteps::narrowAtTime (const value_type& invalid_time, const PathPtr_t& path,
+    bool SmallSteps::narrowAtTime (const value_type& invalid_time, const PathPtr_t& path,
         const PiecewiseAffine& param, Times_t& times)
     {
       typedef std::vector <value_type> SPs_t; // Step parameters
@@ -505,7 +524,10 @@ namespace hpp {
       const std::size_t i_time = std::distance (times.begin(), _time);
       const std::size_t nb_time = times.size();
       Phase phase = MIDDLE_PHASE;
-      assert (i_time > 0 && i_time <= nb_time);
+      if (!(i_time > 0 && i_time <= nb_time)) {
+        hppDout (error, "Malformed time sequence");
+        return false;
+      }
       if      (i_time == 0) throw std::runtime_error ("Error");
       else if (i_time == 1)             phase = FIRST_INIT;
       else if (i_time == 2)             phase = FIRST_SINGLE_SUPPORT;
@@ -567,7 +589,10 @@ namespace hpp {
       if (footPrintsIsRight_[ib_fp + nbStep] == footPrintsIsRight_[ib_fp + 0]) {
         hppDout (error, "Foot step should alternate between right and left.");
       }
-      assert (std::adjacent_find (stepParameters_.begin (), stepParameters_.end(), std::greater_equal<double>()) == stepParameters_.end());
+      if (!isStrictlyIncreasing(stepParameters_)) {
+        hppDout(error, "Step parameter sequence should be strictly increasing.");
+        return false;
+      }
 
       FootPrints_t newFPs (2, footPrints_ [ib_fp]);
       footPrints_.insert (_FP_Before + 1, newFPs.begin (), newFPs.end ());
@@ -597,10 +622,12 @@ namespace hpp {
             const value_type newSST = newDST * ratioSSDS;
             const value_type newIT  = newDST * ratioIDS;
             times[1] = newIT; times[2] = newIT + newSST;
+            const value_type last = times[2*3 + 2];
             for (std::size_t i = 1; i < 4; ++i) {
               times[2*i + 1] = times[2*i    ] + newDST;
               times[2*i + 2] = times[2*i + 1] + newSST; // for i == 3, this should do nothing.
             }
+            assert(isApprox(last, times[2*3 + 2]));
           }
           break;
         case MIDDLE_PHASE:
@@ -615,9 +642,14 @@ namespace hpp {
             // ratio    = newSST / newDST
             value_type newDST = ( interval / 4 ) / ( 1 + 1 * ratioSSDS );
             value_type newSST = ( interval / 4 ) - newDST;
+            const value_type last = times[ib_times + 2*3 + 1];
             for (std::size_t i = 0; i < 4; ++i) {
               times[ib_times + 2*i    ] = times[ib_times + 2*i - 1] + newSST;
               times[ib_times + 2*i + 1] = times[ib_times + 2*i    ] + newDST; // for i == 3, this should do nothing.
+            }
+            if (!isApprox(last, times[ib_times + 2*3 + 1])) {
+              hppDout(warning, "Inconsistent time rescaling. Error is " << (last - times[ib_times + 2*3 + 1]));
+              hppDout(warning, "newSST= " << newSST << " and newDST= " << newDST);
             }
             // assert (times[ib_times + 1] == newTimes[3] + newSST)
           }
@@ -640,10 +672,20 @@ namespace hpp {
               times[i_start + 2*i + 2] = times[i_start + 2*i + 1] + newDST; // for i == 3, this should do nothing.
             }
             times[nb_time - 2] = times[nb_time-3] + newSST;
-            times[nb_time - 1] = times[nb_time-2] + newIT; // Should be useless
+            assert(
+                isApprox(times[nb_time - 1],
+                  times[nb_time-2] - newIT)
+                );
+            // times[nb_time - 1] = times[nb_time-2] + newIT; // Should be useless
           }
           break;
       }
+
+      if (!isStrictlyIncreasing(times)) {
+        hppDout(error, "Time sequence should be strictly increasing.");
+        return false;
+      }
+      return true;
     }
   } // wholebodyStep
 } // namespace hpp
