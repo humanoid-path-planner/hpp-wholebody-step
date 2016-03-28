@@ -279,13 +279,23 @@ namespace hpp {
       }
       getStepParameters (path);
       // Create pattern generator with height of center of mass
+      // and compute initial and final COM state
       model::CenterOfMassComputationPtr_t comComp = model::CenterOfMassComputation::
         create (robot_);
       comComp->add (robot_->waist()->parentJoint ());
       comComp->computeMass ();
-      comComp->compute (model::Device::COM);
 
+      robot_->currentConfiguration (path->initial ());
+      robot_->computeForwardKinematics ();
+      comComp->compute (model::Device::COM);
+      vector_t comInitPos(2); comInitPos << comComp->com()[0], comComp->com()[1];
       value_type comH = comComp->com () [2];
+      robot_->currentConfiguration (path->end ());
+      robot_->computeForwardKinematics ();
+      comComp->compute (model::Device::COM);
+      vector_t comEndPos(2); comEndPos << comComp->com()[0], comComp->com()[1];
+      vector_t comVelocity (vector_t::Zero (2));
+
       value_type ankleShift = robot_->leftAnkle()->currentTransformation ().getTranslation () [2];
       if (std::abs (ankleShift - robot_->rightAnkle()->currentTransformation ().getTranslation () [2]) > 1e-6) {
         hppDout (error, "Left and right ankle are not at the same height. Difference is "
@@ -314,6 +324,8 @@ namespace hpp {
 
         pg_->timeSequence (times);
         pg_->footPrintSequence (footPrints_);
+        pg_->setInitialComState (comInitPos, comVelocity);
+        pg_->setEndComState (comEndPos, comVelocity);
         CubicBSplinePtr_t com = pg_->solve ();
 
         value_type failureP = -1;
