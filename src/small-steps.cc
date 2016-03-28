@@ -314,12 +314,22 @@ namespace hpp {
       while (!valid && nbTries < 20) {
         // Build time parameterization of initial path
         // There are two footprints per step parameter
+        // times.size() := T = 2*p - 2
+        // stepParameters_.size() := S = p - 2
         PiecewiseAffine param;
-        param.addPair (0., stepParameters_ [0]);
-        for (std::size_t i=0; i<p-3; ++i) {
+        // s0    s0          s1        s2
+        // |     |           |         |
+        // t0 - t1 - t2 - t3 - t4 - t5 - t6
+        //       s[-3]           s[-2]             s[-1]   s[-1]
+        //       |               |                 |       |
+        // t[-7] - t[-6] - t[-5] - t[-4] - t[-3] - t[-2] - t[-1]
+        param.addPair (times[0], stepParameters_ [0]);
+        param.addPair (times[1], stepParameters_ [0]);
+        for (std::size_t i=1; i<p-3; ++i) {
           param.addPair (.5*(times [2*i+1] + times [2*i+2]),
-              .5*(stepParameters_ [i] + stepParameters_ [i+1]));
+              stepParameters_ [i]);
         }
+        param.addPair (times [2*p-4], stepParameters_ [p-3]);
         param.addPair (times [2*p-3], stepParameters_ [p-3]);
 
         pg_->timeSequence (times);
@@ -549,9 +559,8 @@ namespace hpp {
       else                              phase = MIDDLE_PHASE;
 
       // Find step parameter before and after collision
-      SPs_t::iterator _step = std::lower_bound
-        (stepParameters_.begin (), stepParameters_.end (), timeInPath);
-      SPs_t::iterator _step_After = _step, _step_Before = _step;
+      SPs_t::iterator _step_After  = stepParameters_.begin (),
+                      _step_Before = stepParameters_.begin ();
       switch (phase) {
         case FIRST_INIT:
         case FIRST_SINGLE_SUPPORT:
@@ -559,9 +568,8 @@ namespace hpp {
           std::advance (_step_After, 1);
           break;
         case MIDDLE_PHASE:
-          std::advance (_step_Before, -2);
-          if (_step_After + 1 != stepParameters_.end())
-            std::advance (_step_After ,  1);
+          std::advance (_step_Before, (i_time - 3) / 2);
+          std::advance (_step_After,  std::min((i_time + 1) / 2, stepParameters_.size() - 1));
           break;
         case LAST_SINGLE_SUPPORT:
         case LAST_INIT:
