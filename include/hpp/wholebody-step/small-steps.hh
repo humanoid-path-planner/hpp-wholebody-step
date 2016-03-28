@@ -35,6 +35,19 @@ namespace hpp {
     public:
       typedef walkgen::FootPrints_t FootPrints_t;
       typedef walkgen::Times_t Times_t;
+      typedef std::map <value_type, value_type> TimeToParameterMap_t;
+
+      /// Compute parameter along initial path with respect to time.
+      struct PiecewiseAffine
+      {
+        typedef SmallSteps::TimeToParameterMap_t Pairs_t;
+
+        value_type operator () (const value_type& t) const;
+        /// Add a pair (time, parameter)
+        void addPair (const value_type& t, const value_type value);
+
+        Pairs_t pairs_;
+      }; // class PiecewiseAffine
 
       /// Create instance and return shared pointer
       ///
@@ -52,20 +65,6 @@ namespace hpp {
       void init (const SmallStepsWkPtr_t& weak);
     private:
 
-      typedef std::map <value_type, value_type> TimeToParameterMap_t;
-
-      /// Compute parameter along initial path with respect to time.
-      struct PiecewiseAffine
-      {
-        typedef SmallSteps::TimeToParameterMap_t Pairs_t;
-
-        value_type operator () (const value_type& t) const;
-        /// Add a pair (time, parameter)
-        void addPair (const value_type& t, const value_type value);
-
-        Pairs_t pairs_;
-      }; // class PiecewiseAffine
-
       void getStepParameters (const PathVectorPtr_t& path);
       FootPrint footPrintAtParam (const PathPtr_t& path, value_type s, bool right) const;
       Times_t buildInitialTimes (const std::size_t& p);
@@ -73,7 +72,7 @@ namespace hpp {
       /// and times (contained in TTP), the COM trajectory, both foot trajectory
       /// (contained in the member pg_)
       PathVectorPtr_t generateOptimizedPath (const PathVectorPtr_t path,
-          const TimeToParameterMap_t& TTP, CubicBSplinePtr_t com,
+          const PiecewiseAffine& TTP, CubicBSplinePtr_t com,
           value_type comHeight, value_type ankleShift,
           value_type& failureParameter);
       ConstraintSetPtr_t copyNonStabilityConstraints (ConstraintSetPtr_t orig)

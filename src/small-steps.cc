@@ -318,7 +318,7 @@ namespace hpp {
 
         value_type failureP = -1;
         print_steps (param.pairs_, footPrints_, com, nbTries);
-        opted = generateOptimizedPath (path, param.pairs_, com, comH, ankleShift,
+        opted = generateOptimizedPath (path, param, com, comH, ankleShift,
             failureP);
         valid = (failureP < 0);
         if (valid) {
@@ -384,11 +384,12 @@ namespace hpp {
     }
 
     PathVectorPtr_t SmallSteps::generateOptimizedPath (PathVectorPtr_t path,
-        const TimeToParameterMap_t& TTP, CubicBSplinePtr_t com,
+        const SmallSteps::PiecewiseAffine& param, CubicBSplinePtr_t com,
         value_type comHeight, value_type ankleShift,
         value_type& failureParameter)
     {
       assert (robot_);
+      const TimeToParameterMap_t& TTP = param.pairs_;
 
       core::ComparisonTypePtr_t equals = core::Equality::create ();
 
