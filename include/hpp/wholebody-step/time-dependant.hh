@@ -19,6 +19,8 @@
 #ifndef HPP_WHOLEBODY_STEP_TIME_DEPENDANT_HH
 # define HPP_WHOLEBODY_STEP_TIME_DEPENDANT_HH
 
+# include <hpp/core/equation.hh>
+
 # include <hpp/wholebody-step/fwd.hh>
 
 namespace hpp {
@@ -29,9 +31,8 @@ namespace hpp {
     };
     typedef boost::shared_ptr <RightHandSideFunctor> RightHandSideFunctorPtr_t;
 
-    class HPP_WHOLEBODY_STEP_DLLAPI TimeDependant
+    struct HPP_WHOLEBODY_STEP_DLLAPI TimeDependant
     {
-    public:
       void rhsAbscissa (const value_type s) const
       {
         (*rhsFunc_) (eq_->nonConstRightHandSide(), s);
@@ -46,7 +47,6 @@ namespace hpp {
         eq_ (other.eq_), rhsFunc_ (other.rhsFunc_)
       {}
 
-    private:
       EquationPtr_t eq_;
       RightHandSideFunctorPtr_t rhsFunc_;
     }; // class TimeDependant
