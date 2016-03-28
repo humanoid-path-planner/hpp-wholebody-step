@@ -383,10 +383,10 @@ namespace hpp {
         // stepParameters_.size() := S = p - 2
         PiecewiseAffine param;
         // s0    s0          s1        s2
-        // |     |           |         |
+        // |     |           |         |
         // t0 - t1 - t2 - t3 - t4 - t5 - t6
         //       s[-3]           s[-2]             s[-1]   s[-1]
-        //       |               |                 |       |
+        //       |               |                 |       |
         // t[-7] - t[-6] - t[-5] - t[-4] - t[-3] - t[-2] - t[-1]
         param.addPair (times[0], stepParameters_ [0]);
         param.addPair (times[1], stepParameters_ [0]);
