@@ -23,6 +23,7 @@
 # include <hpp/core/path-optimizer.hh>
 # include <hpp/walkgen/foot-print.hh>
 # include <hpp/wholebody-step/fwd.hh>
+# include <hpp/wholebody-step/time-dependant.hh>
 
 namespace hpp {
   namespace wholebodyStep {
@@ -58,6 +59,23 @@ namespace hpp {
       static SmallStepsPtr_t create (const Problem& problem);
       /// Call implementation of delegate path planner
       virtual PathVectorPtr_t optimize (const PathVectorPtr_t& path);
+
+      enum HandConstraintType {
+        FromStart,
+        UntilEnd,
+        All
+      };
+      struct HandConstraint {
+        bool active;
+        HandConstraintType type;
+        value_type abscissa;
+
+        HandConstraint () :
+          active (false), type (All), abscissa (-1) {}
+      };
+
+      HandConstraint leftHand_, rightHand_;
+
     protected:
       /// Constructor with roadmap
       SmallSteps (const Problem& problem);

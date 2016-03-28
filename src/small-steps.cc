@@ -46,6 +46,65 @@
 
 namespace hpp {
   namespace wholebodyStep {
+
+    struct CubicBSplineToCom : public RightHandSideFunctor {
+      CubicBSplinePtr_t cubic_;
+      value_type h_;
+
+      CubicBSplineToCom (CubicBSplinePtr_t cubic, value_type height)
+        : cubic_ (cubic), h_ (height) {}
+
+      void operator () (vectorOut_t result, const value_type& input) const {
+        assert (cubic_);
+        (*cubic_) (result.segment <2> (0), input);
+        result[2] = h_;
+      }
+    };
+
+    struct FootPathToFootPos : public RightHandSideFunctor {
+      PathPtr_t path_;
+      value_type shiftH_;
+      JointFrameFunctionPtr_t sf_;
+      mutable Configuration_t tmp;
+
+      FootPathToFootPos (DevicePtr_t dev, PathPtr_t p, value_type height_shift)
+        : path_ (p), shiftH_ (height_shift), tmp (p->outputSize ())
+      {
+        JointPtr_t foot = dev->getJointByName ("foot");
+        sf_ = JointFrameFunction::create ("fake-device-foot", dev,
+            JointFrame::create (foot)
+            );
+      }
+
+      void operator () (vectorOut_t result, const value_type& input) const {
+        assert (path_);
+        if (!(*path_) (tmp, input))
+          throw std::runtime_error ("Could not apply constraints");
+        (*sf_) (result, tmp);
+        result[2] -= shiftH_;
+      }
+    };
+
+    struct ReproducePath : public RightHandSideFunctor {
+      PathPtr_t path_;
+      DifferentiableFunctionPtr_t func_;
+      SmallSteps::PiecewiseAffine newToOld_;
+      mutable Configuration_t tmp;
+
+      ReproducePath (const DifferentiableFunctionPtr_t& func,
+          const PathPtr_t& p,
+          const SmallSteps::PiecewiseAffine& newToOld)
+        : path_ (p), func_ (func), newToOld_ (newToOld), tmp (p->outputSize ())
+      {}
+
+      void operator () (vectorOut_t result, const value_type& input) const {
+        assert (path_);
+        if (!(*path_) (tmp, newToOld_ (input)))
+          throw std::runtime_error ("Could not apply constraints");
+        (*func_) (result, tmp);
+      }
+    };
+
     namespace {
       typedef std::map <value_type, value_type> TimeToParameterMap_t;
       void print_steps (const TimeToParameterMap_t& param,
@@ -91,6 +150,50 @@ namespace hpp {
       template <typename Scalar>
         inline bool isApprox (const Scalar& a, const Scalar& b, const Scalar& eps = Eigen::NumTraits<Scalar>::epsilon())
         { return std::abs (a - b) < eps; }
+
+      struct HandConstraintData {
+        SmallSteps::HandConstraint& model;
+
+        JointFrameFunctionPtr_t func;
+        NumericalConstraintPtr_t eq;
+        TimeDependant TD;
+
+        HandConstraintData (SmallSteps::HandConstraint& m) :
+          model (m), TD (eq, RightHandSideFunctorPtr_t()) {}
+
+        void setup (const HumanoidRobotPtr_t& robot,
+            const JointPtr_t joint, const PathPtr_t& path,
+            const SmallSteps::PiecewiseAffine& param)
+        {
+          if (!model.active) return;
+          func = JointFrameFunction::create
+            ("hand-walkgen", robot, JointFrame::create (joint));
+          eq = NumericalConstraint::create (func, core::Equality::create ());
+          TD = TimeDependant (eq, RightHandSideFunctorPtr_t
+              (new ReproducePath (func, path, param))
+              );
+        }
+
+        inline void add (const ConfigProjectorPtr_t& proj) const
+        {
+          if (!model.active) return;
+          // Currently, there is no option to set a hand constraint as optional.
+          // proj->add (eq, core::SizeIntervals_t(0), 1);
+          // proj->lastIsOptional (true);
+          proj->add (eq);
+        }
+
+        inline void add (const TimeDependantPathPtr_t& p) const
+        {
+          if (!model.active) return;
+          p->add (TD);
+        }
+
+        inline void updateAbscissa (const value_type& t) const
+        {
+          if (model.active) TD.rhsAbscissa (t);
+        }
+      };
     }
 
     value_type SmallSteps::PiecewiseAffine::operator () (const value_type& t) const
@@ -115,44 +218,6 @@ namespace hpp {
     {
       pairs_ [t] = value;
     }
-
-    struct CubicBSplineToCom : public RightHandSideFunctor {
-      CubicBSplinePtr_t cubic_;
-      value_type h_;
-
-      CubicBSplineToCom (CubicBSplinePtr_t cubic, value_type height)
-        : cubic_ (cubic), h_ (height) {}
-
-      void operator () (vectorOut_t result, const value_type& input) const {
-        assert (cubic_);
-        (*cubic_) (result.segment <2> (0), input);
-        result[2] = h_;
-      }
-    };
-
-    struct FootPathToFootPos : public RightHandSideFunctor {
-      PathPtr_t path_;
-      value_type shiftH_;
-      JointFrameFunctionPtr_t sf_;
-      mutable Configuration_t tmp;
-
-      FootPathToFootPos (DevicePtr_t dev, PathPtr_t p, value_type height_shift)
-        : path_ (p), shiftH_ (height_shift), tmp (p->outputSize ())
-      {
-        JointPtr_t foot = dev->getJointByName ("foot");
-        sf_ = JointFrameFunction::create ("fake-device-foot", dev,
-            JointFrame::create (foot)
-            );
-      }
-
-      void operator () (vectorOut_t result, const value_type& input) const {
-        assert (path_);
-        if (!(*path_) (tmp, input))
-          throw std::runtime_error ("Could not apply constraints");
-        (*sf_) (result, tmp);
-        result[2] -= shiftH_;
-      }
-    };
 
     SmallStepsPtr_t SmallSteps::create (const Problem& problem)
     {
@@ -440,6 +505,10 @@ namespace hpp {
           (new FootPathToFootPos (pg_->rightFoot (), pg_->rightFootTrajectory (), ankleShift))
           );
 
+      HandConstraintData leftHand(leftHand_), rightHand(rightHand_);
+      leftHand .setup(robot_, robot_-> leftWrist(), path, param);
+      rightHand.setup(robot_, robot_->rightWrist(), path, param);
+
       // TODO: handle the case where each subpath has its own constraints.
       ConstraintSetPtr_t constraints = copyNonStabilityConstraints
         (path->pathAtRank (0)->constraints());
@@ -447,6 +516,8 @@ namespace hpp {
       proj->add (comEq);
       proj->add (leftEq);
       proj->add (rightEq);
+      leftHand .add(proj);
+      rightHand.add(proj);
 
       PathVectorPtr_t opted = PathVector::create (path->outputSize (),
           path->outputDerivativeSize ());
@@ -462,6 +533,8 @@ namespace hpp {
           comEqTD.rhsAbscissa (T);
           leftEqTD.rhsAbscissa (T);
           rightEqTD.rhsAbscissa (T);
+          leftHand .updateAbscissa (T);
+          rightHand.updateAbscissa (T);
         }
         proj->updateRightHandSide ();
         bool success = constraints->apply (qe);
@@ -474,6 +547,7 @@ namespace hpp {
           TimeDependantPathPtr_t p = TimeDependantPath::create
             (StraightPath::create (robot_,qi,qe,T - lastT), constraints);
           p->add (comEqTD); p->add (leftEqTD); p->add (rightEqTD);
+          leftHand .add(p); rightHand.add(p);
           p->setAffineTransform (1, lastT);
           Configuration_t qtest = qi;
           assert ((*p) (qtest, 0));
