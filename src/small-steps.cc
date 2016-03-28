@@ -648,7 +648,10 @@ namespace hpp {
               times[2*i + 1] = times[2*i    ] + newDST;
               times[2*i + 2] = times[2*i + 1] + newSST; // for i == 3, this should do nothing.
             }
-            assert(isApprox(last, times[2*3 + 2]));
+            if (!isApprox(last, times[2*3 + 2])) {
+              hppDout(warning, "Inconsistent time rescaling. Error is " << (last - times[2*3 + 2]));
+              hppDout(warning, "newSST= " << newSST << ", newDST= " << newDST << " and newIT= " << newIT);
+            }
           }
           break;
         case MIDDLE_PHASE:
