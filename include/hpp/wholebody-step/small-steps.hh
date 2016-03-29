@@ -1,6 +1,6 @@
 ///
 /// Copyright (c) 2015 CNRS
-/// Authors: Florent Lamiraux
+/// Authors: Florent Lamiraux, Joseph Mirabel
 ///
 ///
 // This file is part of hpp-wholebody-step.

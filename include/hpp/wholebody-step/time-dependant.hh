@@ -29,7 +29,7 @@ namespace hpp {
       virtual void operator() (vectorOut_t output, const value_type& input)
         const = 0;
     };
-    typedef boost::shared_ptr <RightHandSideFunctor> RightHandSideFunctorPtr_t;
+    typedef boost::shared_ptr <const RightHandSideFunctor> RightHandSideFunctorPtr_t;
 
     struct HPP_WHOLEBODY_STEP_DLLAPI TimeDependant
     {

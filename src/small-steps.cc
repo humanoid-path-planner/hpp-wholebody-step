@@ -1,6 +1,6 @@
 ///
 /// Copyright (c) 2015 CNRS
-/// Authors: Florent Lamiraux
+/// Authors: Florent Lamiraux, Joseph Mirabel
 ///
 ///
 // This file is part of hpp-wholebody-step.
@@ -44,66 +44,10 @@
 #include <hpp/wholebody-step/time-dependant-path.hh>
 #include <hpp/wholebody-step/static-stability-constraint.hh> // STABILITY_CONTEXT
 
+#include <small-steps/functors.hh>
+
 namespace hpp {
   namespace wholebodyStep {
-
-    struct CubicBSplineToCom : public RightHandSideFunctor {
-      CubicBSplinePtr_t cubic_;
-      value_type h_;
-
-      CubicBSplineToCom (CubicBSplinePtr_t cubic, value_type height)
-        : cubic_ (cubic), h_ (height) {}
-
-      void operator () (vectorOut_t result, const value_type& input) const {
-        assert (cubic_);
-        (*cubic_) (result.segment <2> (0), input);
-        result[2] = h_;
-      }
-    };
-
-    struct FootPathToFootPos : public RightHandSideFunctor {
-      PathPtr_t path_;
-      value_type shiftH_;
-      JointFrameFunctionPtr_t sf_;
-      mutable Configuration_t tmp;
-
-      FootPathToFootPos (DevicePtr_t dev, PathPtr_t p, value_type height_shift)
-        : path_ (p), shiftH_ (height_shift), tmp (p->outputSize ())
-      {
-        JointPtr_t foot = dev->getJointByName ("foot");
-        sf_ = JointFrameFunction::create ("fake-device-foot", dev,
-            JointFrame::create (foot)
-            );
-      }
-
-      void operator () (vectorOut_t result, const value_type& input) const {
-        assert (path_);
-        if (!(*path_) (tmp, input))
-          throw std::runtime_error ("Could not apply constraints");
-        (*sf_) (result, tmp);
-        result[2] -= shiftH_;
-      }
-    };
-
-    struct ReproducePath : public RightHandSideFunctor {
-      PathPtr_t path_;
-      DifferentiableFunctionPtr_t func_;
-      SmallSteps::PiecewiseAffine newToOld_;
-      mutable Configuration_t tmp;
-
-      ReproducePath (const DifferentiableFunctionPtr_t& func,
-          const PathPtr_t& p,
-          const SmallSteps::PiecewiseAffine& newToOld)
-        : path_ (p), func_ (func), newToOld_ (newToOld), tmp (p->outputSize ())
-      {}
-
-      void operator () (vectorOut_t result, const value_type& input) const {
-        assert (path_);
-        if (!(*path_) (tmp, newToOld_ (input)))
-          throw std::runtime_error ("Could not apply constraints");
-        (*func_) (result, tmp);
-      }
-    };
 
     namespace {
       typedef std::map <value_type, value_type> TimeToParameterMap_t;
