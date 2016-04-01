@@ -98,7 +98,7 @@ namespace hpp {
       struct HandConstraintData {
         SmallSteps::HandConstraint& model;
 
-        JointFrameFunctionPtr_t func;
+        DifferentiableFunctionPtr_t func;
         NumericalConstraintPtr_t eq;
         TimeDependant TD;
 
@@ -110,8 +110,9 @@ namespace hpp {
             const SmallSteps::PiecewiseAffine& param)
         {
           if (!model.active) return;
-          func = JointFrameFunction::create
-            ("hand-walkgen", robot, JointFrame::create (joint));
+          // Position only
+          func = PointInJointFunction::create
+            ("point-hand-walkgen", robot, PointInJoint::create (joint, vector3_t (0,0,0)));
           eq = NumericalConstraint::create (func, core::Equality::create ());
           TD = TimeDependant (eq, RightHandSideFunctorPtr_t
               (new ReproducePath (func, path, param))
@@ -121,10 +122,12 @@ namespace hpp {
         inline void add (const ConfigProjectorPtr_t& proj) const
         {
           if (!model.active) return;
-          // Currently, there is no option to set a hand constraint as optional.
-          // proj->add (eq, core::SizeIntervals_t(0), 1);
-          // proj->lastIsOptional (true);
-          proj->add (eq);
+          if (model.optional) {
+            proj->add (eq, core::SizeIntervals_t(0), 1);
+            proj->lastIsOptional (true);
+          } else {
+            proj->add (eq);
+          }
         }
 
         inline void add (const TimeDependantPathPtr_t& p) const
@@ -314,7 +317,7 @@ namespace hpp {
       pg_->defaultStepHeight (defaultStepHeight_);
       bool valid = false;
       std::size_t nbTries = 0;
-      PathVectorPtr_t opted, lastCollidingOpted;
+      PathVectorPtr_t opted, lastCollidingOpted, lastProjFailed;
 
       // Build time sequence
       std::size_t p = footPrints_.size ();
@@ -352,7 +355,9 @@ namespace hpp {
         opted = generateOptimizedPath (path, param, com, comH, ankleShift,
             failureP);
         valid = (failureP < 0);
-        if (valid) {
+        if (!valid) {
+          lastProjFailed = opted;
+        } else {
           core::PathValidationPtr_t pv = problem().pathValidation ();
           PathPtr_t unused;
           core::PathValidationReportPtr_t report;
@@ -368,7 +373,8 @@ namespace hpp {
           if (!narrowAtTime (failureP, path, param, times)) {
             hppDout(error, "Could not narrow trajectory at time " << failureP);
             if (lastCollidingOpted) return lastCollidingOpted;
-            else return opted;
+            else if (lastProjFailed) return lastProjFailed;
+            else return path;
           }
           // Prepare next iteration
           p = footPrints_.size ();
@@ -485,7 +491,7 @@ namespace hpp {
         if (!success) {
           failureParameter = T;
           hppDout (error, "Failed to project a configuration at time " << T);
-          return path;
+          return opted;
         }
         if (lastT >= 0) {
           TimeDependantPathPtr_t p = TimeDependantPath::create
@@ -606,7 +612,7 @@ namespace hpp {
       assert (stepUnchanged > 0);
 
       // Update the step parameters and footprints
-      FootPrints_t::iterator _FP_Before = footPrints_.begin (); std::advance (_FP_Before, ib_fp);
+      FootPrints_t::iterator _FP_Before = footPrints_.begin (); std::advance (_FP_Before, ib_sp);
       std::vector<bool>::iterator _FPiR_Before = footPrintsIsRight_.begin (); std::advance (_FPiR_Before, ib_fp);
 
       // Add two steps
@@ -623,15 +629,17 @@ namespace hpp {
         hppDout (error, "Step parameters are not consistent: "
             << std::abs (stepParameters_[ib_sp + nbStep + 1] - stepParameters_[ib_sp + nbStep] - step));
       }
-      for (std::size_t i = 0; i < nbStep + 1; ++i)
+      for (std::size_t i = 0; i < std::min(nbStep + 2, footPrintsIsRight_.size()); ++i)
         footPrintsIsRight_[ib_fp + i] = !footPrintsIsRight_[ib_fp + i - 1];
-      if (footPrintsIsRight_[ib_fp + nbStep] == footPrintsIsRight_[ib_fp + 0]) {
-        hppDout (error, "Foot step should alternate between right and left.");
+      for (std::size_t i = 1; i < footPrintsIsRight_.size(); ++i) {
+        if (footPrintsIsRight_[i] == footPrintsIsRight_[i-1]) {
+          hppDout (error, "Foot step should alternate between right and left.");
+        }
       }
-      if (!isStrictlyIncreasing(stepParameters_)) {
-        hppDout(error, "Step parameter sequence should be strictly increasing.");
-        return false;
-      }
+        if (!isStrictlyIncreasing(stepParameters_)) {
+          hppDout(error, "Step parameter sequence should be strictly increasing.");
+          return false;
+        }
 
       FootPrints_t newFPs (2, footPrints_ [ib_fp]);
       footPrints_.insert (_FP_Before + 1, newFPs.begin (), newFPs.end ());

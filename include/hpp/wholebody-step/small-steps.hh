@@ -67,11 +67,12 @@ namespace hpp {
       };
       struct HandConstraint {
         bool active;
+        bool optional;
         HandConstraintType type;
         value_type abscissa;
 
         HandConstraint () :
-          active (false), type (All), abscissa (-1) {}
+          active (false), optional (false), type (All), abscissa (-1) {}
       };
 
       HandConstraint leftHand_, rightHand_;

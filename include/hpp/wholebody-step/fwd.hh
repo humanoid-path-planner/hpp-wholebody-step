@@ -42,6 +42,8 @@ namespace hpp {
     typedef constraints::Traits<constraints::JointFrame>::Ptr_t JointFramePtr_t;
     typedef constraints::SymbolicFunction<JointFrame> JointFrameFunction;
     typedef constraints::SymbolicFunction<JointFrame>::Ptr_t JointFrameFunctionPtr_t;
+    typedef constraints::PointInJoint PointInJoint;
+    typedef constraints::SymbolicFunction<PointInJoint> PointInJointFunction;
     typedef constraints::PointCom PointCom;
     typedef constraints::SymbolicFunction<PointCom> PointComFunction;
     typedef constraints::SymbolicFunction<PointCom>::Ptr_t PointComFunctionPtr_t;
