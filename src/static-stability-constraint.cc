@@ -143,10 +143,49 @@ namespace hpp {
       return result;
     }
 
+    std::vector <NumericalConstraintPtr_t> createStaticStabilityConstraint
+    (const DevicePtr_t& robot, const CenterOfMassComputationPtr_t& comc,
+     const JointPtr_t& leftAnkle, const JointPtr_t& rightAnkle,
+     ConfigurationIn_t configuration, bool sliding)
+    {
+      if (sliding) {
+	return
+	  createSlidingStabilityConstraint (robot, comc, leftAnkle, rightAnkle,
+					    configuration);
+      } else {
+	std::vector <NumericalConstraintPtr_t> result;
+      robot->currentConfiguration (configuration);
+      robot->computeForwardKinematics ();
+      comc->compute (model::Device::COM);
+      JointPtr_t joint1 = leftAnkle;
+      JointPtr_t joint2 = rightAnkle;
+      const Transform3f& M1 = joint1->currentTransformation ();
+      const Transform3f& M2 = joint2->currentTransformation ();
+      const vector3_t& x = comc->com ();
+      // position of center of mass in left ankle frame
+      matrix3_t R1T (M1.getRotation ()); R1T.transpose ();
+      vector3_t xloc = R1T * (x - M1.getTranslation ());
+      result.push_back (NumericalConstraint::create (RelativeCom::create
+            (robot, comc, joint1, xloc)));
+      result.back ()->function ().context (STABILITY_CONTEXT);
+      // pose of the left foot
+      result.push_back (NumericalConstraint::create
+			(constraints::Transformation::create
+			 ("Left foot pose", robot, joint1, M1)));
+      result.back ()->function ().context (STABILITY_CONTEXT);
+      // pose of the right foot
+      result.push_back (NumericalConstraint::create
+			(constraints::Transformation::create
+			 ("Right foot pose", robot, joint2, M2)));
+      result.back ()->function ().context (STABILITY_CONTEXT);
+      return result;
+      }
+    }
+
     std::vector <NumericalConstraintPtr_t> createAlignedCOMStabilityConstraint
     (const DevicePtr_t& robot, const CenterOfMassComputationPtr_t& comc,
      const JointPtr_t& leftAnkle, const JointPtr_t& rightAnkle,
-     ConfigurationIn_t configuration)
+     ConfigurationIn_t configuration, bool sliding)
     {
       vector3_t zero; zero.setZero ();
 
@@ -172,31 +211,21 @@ namespace hpp {
           );
       result.push_back (nm);
       result.back ()->function ().context (STABILITY_CONTEXT);
-      // Orientation of the right foot
-      matrix3_t reference;
-      reference.setIdentity ();
-      nm = NumericalConstraint::create (Orientation::create
-          ("Right foot rx/ry orientation", robot, joint2, reference,
-            list_of (true)(true)(false).convert_to_container<BoolVector_t>()));
+      std::vector <bool> mask (6, true);
+      if (sliding) {
+	mask [0] = false; mask [1] = false; mask [5] = false;
+      }
+      // Pose of the right foot
+      nm = NumericalConstraint::create
+	(constraints::Transformation::create
+	 ("Right foot pose", robot, joint2, M2, mask));
       result.push_back(nm);
       result.back ()->function ().context (STABILITY_CONTEXT);
-      // Orientation of the left foot
-      nm = NumericalConstraint::create (Orientation::create
-          ("Left foot rx/ry orientation", robot, joint1, reference,
-            list_of (true)(true)(false).convert_to_container<BoolVector_t>()));
-      result.push_back (nm);
-      result.back ()->function ().context (STABILITY_CONTEXT);
-      // Position of the right foot
-      nm = NumericalConstraint::create (Position::create
-          ("Right foot z position", robot, joint2, zero, M2.getTranslation (),
-           list_of (false)(false)(true).convert_to_container<BoolVector_t>()));
-      result.push_back (nm);
-      result.back ()->function ().context (STABILITY_CONTEXT);
-      // Position of the left foot
-      nm = NumericalConstraint::create (Position::create
-          ("Left foot z position", robot, joint1, zero, M1.getTranslation (),
-           list_of (false)(false)(true).convert_to_container<BoolVector_t>()));
-      result.push_back (nm);
+      // Pose of the left foot
+      nm = NumericalConstraint::create
+	(constraints::Transformation::create
+	 ("Right pose", robot, joint1, M1, mask));
+      result.push_back(nm);
       result.back ()->function ().context (STABILITY_CONTEXT);
       return result;
     }

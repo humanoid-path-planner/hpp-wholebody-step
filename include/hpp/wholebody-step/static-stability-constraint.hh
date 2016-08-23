@@ -54,7 +54,7 @@ namespace hpp {
     std::vector <NumericalConstraintPtr_t> createSlidingStabilityConstraint
     (const DevicePtr_t& robot, const CenterOfMassComputationPtr_t& comc,
      const JointPtr_t& leftAnkle, const JointPtr_t& rightAnkle,
-     ConfigurationIn_t configuration);
+     ConfigurationIn_t configuration) HPP_WHOLEBODY_STEP_DEPRECATED;
 
     /// Create quasi-static stability constraints
     /// The center of mass takes into account all the joints of the robot.
@@ -63,7 +63,8 @@ namespace hpp {
     ///         const JointPtr_t&, const JointPtr_t&, ConfigurationIn_t)
     std::vector <NumericalConstraintPtr_t> createSlidingStabilityConstraint
     (const DevicePtr_t& robot, const JointPtr_t& leftAnkle, 
-     const JointPtr_t& rightAnkle, ConfigurationIn_t configuration);
+     const JointPtr_t& rightAnkle, ConfigurationIn_t configuration)
+      HPP_WHOLEBODY_STEP_DEPRECATED;
 
     /// Create quasi-static stability complementary constraints
     /// \param robot the robot,
@@ -81,29 +82,68 @@ namespace hpp {
     ///
     /// All constraints are returned along with the
     /// hpp::core::ComparisonType::createDefault()
-    std::vector <NumericalConstraintPtr_t> createSlidingStabilityConstraintComplement
+    std::vector <NumericalConstraintPtr_t>
+    createSlidingStabilityConstraintComplement
     (const DevicePtr_t& robot, const JointPtr_t& leftAnkle,
      ConfigurationIn_t configuration);
 
     /// Constraints that ensure that the COM is between the two ankles
     /// \param robot the robot,
-    /// \param comc a hpp::model::CenterOfMassComputation that handle
-    ///        COM computations.
+    /// \param comc computation of the center of mass (whole robot or subtree)
     /// \param leftAnkle left ankle joint,
     /// \param rightAnkle right ankle joint,
     /// \param configuration the configuration of the robot satisfying
     ///        the constraint,
+    /// \param sliding whether the robot can slide on the ground
     ///
-    /// Create a the following set of constraints:
+    /// Create the following set of constraints:
     /// \li ComBetweenFeet constraints (dimension 3)
-    /// \li orientation of the right foot around x and y (dimension 2),
-    /// \li position of the right foot along z (dimension 1),
-    /// \li orientation of the left foot around x and y (dimension 2),
-    /// \li position of the left foot along z (dimension 1),
+    /// \li orientation of the right foot around x and y (dimension 2)
+    ///     if sliding, dimension 3 otherwise
+    /// \li position of the right foot along z (dimension 1) if sliding
+    ///     dimension 3 otherwise,
+    /// \li orientation of the left foot around x and y (dimension 2) if
+    ///     sliding, dimension 3 otherwise
+    /// \li position of the left foot along z (dimension 1) if sliding,
+    ///     dimension 3 otherwise.
     std::vector <NumericalConstraintPtr_t> createAlignedCOMStabilityConstraint
     (const DevicePtr_t& robot, const CenterOfMassComputationPtr_t& comc,
      const JointPtr_t& leftAnkle, const JointPtr_t& rightAnkle,
-     ConfigurationIn_t configuration);
+     ConfigurationIn_t configuration, bool sliding = true);
+
+    /// Create quasi-static stability constraints
+    /// \param robot the robot,
+    /// \param comc computation of the center of mass (whole robot or subtree)
+    /// \param leftAnkle left ankle joint,
+    /// \param rightAnkle right ankle joint,
+    /// \param configuration the configuration of the robot satisfying
+    ///        the constraint,
+    /// \param sliding whether the robot can slide on the ground
+    ///
+    /// If sliding is true, the constraints make the feet of the robot lie on
+    /// a horizontal ground and the center of mass project at a constant
+    /// position with respect to the feet. Five constraints are returned:
+    /// \li relative position of the center of mass (as defined with comc)
+    ///     in the left ankle frame (dimension 3),
+    /// \li relative orientation of the feet (dimension 3),
+    /// \li relative position of the feet (dimension 3),
+    /// \li orientation of the left foot (dimension 2),
+    /// \li position of the left foot (dimension 1).
+    ///
+    /// If sliding is false, 3 constraints are returned
+    ///
+    /// \li relative position of the center of mass (as defined with comc)
+    ///     in the left ankle frame (dimension 3),
+    /// \li absolute position and orientation of left foot,
+    /// \li absolute position and orientation of right foot.
+    ///
+    /// All constraints are returned along with the
+    /// hpp::core::ComparisonType::createDefault()
+    std::vector <NumericalConstraintPtr_t> createStaticStabilityConstraint
+    (const DevicePtr_t& robot, const CenterOfMassComputationPtr_t& comc,
+     const JointPtr_t& leftAnkle, const JointPtr_t& rightAnkle,
+     ConfigurationIn_t configuration, bool sliding);
+
   } // namespace wholebodyStep
 } // namespace hpp
 #endif // HPP_WHOLEBODY_STEP_STATIC_STABILITY_CONSTRAINT_HH
