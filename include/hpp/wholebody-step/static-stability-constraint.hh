@@ -20,8 +20,6 @@
 #ifndef HPP_WHOLEBODY_STEP_STATIC_STABILITY_CONSTRAINT_HH
 # define HPP_WHOLEBODY_STEP_STATIC_STABILITY_CONSTRAINT_HH
 
-# include <hpp/model/fwd.hh>
-# include <hpp/model/humanoid-robot.hh>
 # include <hpp/wholebody-step/fwd.hh>
 # include <hpp/wholebody-step/config.hh>
 # include <hpp/wholebody-step/deprecated.hh>
@@ -32,7 +30,7 @@ namespace hpp {
 
     /// Create quasi-static stability constraints
     /// \param robot the robot,
-    /// \param comc a hpp::model::CenterOfMassComputation that handle
+    /// \param comc a hpp::pinocchio::CenterOfMassComputation that handle
     ///        COM computations.
     /// \param leftAnkle left ankle joint,
     /// \param rightAnkle right ankle joint,
@@ -68,7 +66,7 @@ namespace hpp {
 
     /// Create quasi-static stability complementary constraints
     /// \param robot the robot,
-    /// \param comc a hpp::model::CenterOfMassComputation that handle
+    /// \param comc a hpp::pinocchio::CenterOfMassComputation that handle
     ///        COM computations.
     /// \param leftAnkle left ankle joint,
     /// \param configuration the configuration of the robot satisfying

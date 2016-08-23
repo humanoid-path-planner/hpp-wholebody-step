@@ -20,10 +20,10 @@
 #include <hpp/wholebody-step/static-stability-constraint.hh>
 
 #include <boost/assign/list_of.hpp>
-#include <hpp/model/humanoid-robot.hh>
-#include <hpp/model/joint.hh>
-#include <hpp/model/device.hh>
-#include <hpp/model/center-of-mass-computation.hh>
+#include <hpp/pinocchio/humanoid-robot.hh>
+#include <hpp/pinocchio/joint.hh>
+#include <hpp/pinocchio/device.hh>
+#include <hpp/pinocchio/center-of-mass-computation.hh>
 #include <hpp/core/config-projector.hh>
 #include <hpp/core/numerical-constraint.hh>
 #include <hpp/constraints/generic-transformation.hh>
@@ -32,6 +32,15 @@
 
 namespace hpp {
   namespace wholebodyStep {
+    namespace {
+      using se3::SE3;
+      static vector3_t zero (vector3_t::Zero());
+      static matrix3_t I3 (matrix3_t::Identity());
+      static SE3 MId (SE3::Identity());
+      inline SE3 toSE3(const matrix3_t& R) { return SE3 (R, zero); }
+      inline SE3 toSE3(const vector3_t& t) { return SE3 (I3, t); }
+    }
+
     using hpp::constraints::Orientation;
     using hpp::constraints::OrientationPtr_t;
     using hpp::constraints::Position;
@@ -43,7 +52,8 @@ namespace hpp {
     using hpp::constraints::RelativePosition;
     using hpp::constraints::RelativePositionPtr_t;
     using hpp::constraints::ComBetweenFeet;
-    using hpp::model::CenterOfMassComputation;
+    using hpp::pinocchio::Device;
+    using hpp::pinocchio::CenterOfMassComputation;
     using hpp::core::NumericalConstraint;
     using hpp::core::ComparisonType;
     using hpp::core::ComparisonTypes;
@@ -60,7 +70,6 @@ namespace hpp {
       CenterOfMassComputationPtr_t comc =
         CenterOfMassComputation::create (robot);
       comc->add (robot->rootJoint ());
-      comc->computeMass ();
       return createSlidingStabilityConstraint
         (robot, comc, leftAnkle, rightAnkle, configuration);
     }
@@ -73,43 +82,41 @@ namespace hpp {
       std::vector <NumericalConstraintPtr_t> result;
       robot->currentConfiguration (configuration);
       robot->computeForwardKinematics ();
-      comc->compute (model::Device::COM);
+      comc->compute (Device::COM);
       JointPtr_t joint1 = leftAnkle;
       JointPtr_t joint2 = rightAnkle;
       const Transform3f& M1 = joint1->currentTransformation ();
       const Transform3f& M2 = joint2->currentTransformation ();
       const vector3_t& x = comc->com ();
       // position of center of mass in left ankle frame
-      matrix3_t R1T (M1.getRotation ()); R1T.transpose ();
-      vector3_t xloc = R1T * (x - M1.getTranslation ());
+      matrix3_t R1T (M1.rotation ().transpose());
+      vector3_t xloc = R1T * (x - M1.translation ());
       result.push_back (NumericalConstraint::create (RelativeCom::create
             (robot, comc, joint1, xloc)));
       result.back ()->function ().context (STABILITY_CONTEXT);
       // Relative orientation of the feet
-      matrix3_t reference = R1T * M2.getRotation ();
+      matrix3_t reference = R1T * M2.rotation ();
       result.push_back(NumericalConstraint::create (RelativeOrientation::create
-		       ("Feet relative orientation", robot, joint1, joint2, reference)));
+		       ("Feet relative orientation", robot, joint1, joint2, toSE3(reference))));
       result.back ()->function ().context (STABILITY_CONTEXT);
       // Relative position of the feet
       vector3_t local1; local1.setZero ();
-      vector3_t global1 = M1.getTranslation ();
+      vector3_t global1 = M1.translation ();
       // global1 = R2 local2 + t2
       // local2  = R2^T (global1 - t2)
-      matrix3_t R2T (M2.getRotation ()); R2T.transpose ();
-      vector3_t local2 = R2T * (global1 - M2.getTranslation ());
+      matrix3_t R2T (M2.rotation ().transpose ());
+      vector3_t local2 = R2T * (global1 - M2.translation ());
       result.push_back (NumericalConstraint::create (RelativePosition::create
-			("Feet relative position", robot, joint1, joint2, local1, local2)));
+			("Feet relative position", robot, joint1, joint2, toSE3(local1), toSE3(local2))));
       result.back ()->function ().context (STABILITY_CONTEXT);
       // Orientation of the left foot
-      reference.setIdentity ();
       result.push_back (NumericalConstraint::create (Orientation::create
-            ("Left foot rx/ry orientation", robot, joint1, reference,
+            ("Left foot rx/ry orientation", robot, joint1, MId,
              list_of (true)(true)(false).convert_to_container<BoolVector_t>())));
       result.back ()->function ().context (STABILITY_CONTEXT);
       // Position of the left foot
-      vector3_t zero; zero.setZero ();
       result.push_back (NumericalConstraint::create (Position::create
-            ("Left foot z position", robot, joint1, zero, M1.getTranslation (),
+            ("Left foot z position", robot, joint1, MId, toSE3(M1.translation ()),
              list_of (false)(false)(true).convert_to_container<BoolVector_t>())));
       result.back ()->function ().context (STABILITY_CONTEXT);
       return result;
@@ -124,19 +131,16 @@ namespace hpp {
       robot->computeForwardKinematics ();
       JointPtr_t joint1 = leftAnkle;
       const Transform3f& M1 = joint1->currentTransformation ();
-      matrix3_t reference;
 
       // Orientation of the left foot
-      reference.setIdentity ();
       result.push_back (NumericalConstraint::create (Orientation::create
-            ("Left foot rz orientation", robot, joint1, reference,
+            ("Left foot rz orientation", robot, joint1, MId,
              list_of (false)(false)(true).convert_to_container<BoolVector_t>()),
           core::Equality::create ()));
       result.back ()->function ().context (STABILITY_CONTEXT);
       // Position of the left foot
-      vector3_t zero; zero.setZero ();
       result.push_back (NumericalConstraint::create (Position::create
-            ("Left foot xy position", robot, joint1, zero, M1.getTranslation (),
+            ("Left foot xy position", robot, joint1, MId, toSE3(M1.translation()),
              list_of (true)(true)(false).convert_to_container<BoolVector_t>()),
           core::Equality::create ()));
       result.back ()->function ().context (STABILITY_CONTEXT);
@@ -156,15 +160,15 @@ namespace hpp {
 	std::vector <NumericalConstraintPtr_t> result;
       robot->currentConfiguration (configuration);
       robot->computeForwardKinematics ();
-      comc->compute (model::Device::COM);
+      comc->compute (Device::COM);
       JointPtr_t joint1 = leftAnkle;
       JointPtr_t joint2 = rightAnkle;
       const Transform3f& M1 = joint1->currentTransformation ();
       const Transform3f& M2 = joint2->currentTransformation ();
       const vector3_t& x = comc->com ();
       // position of center of mass in left ankle frame
-      matrix3_t R1T (M1.getRotation ()); R1T.transpose ();
-      vector3_t xloc = R1T * (x - M1.getTranslation ());
+      matrix3_t R1T (M1.rotation ().transpose ());
+      vector3_t xloc = R1T * (x - M1.translation ());
       result.push_back (NumericalConstraint::create (RelativeCom::create
             (robot, comc, joint1, xloc)));
       result.back ()->function ().context (STABILITY_CONTEXT);
@@ -193,12 +197,12 @@ namespace hpp {
       NumericalConstraintPtr_t nm;
       robot->currentConfiguration (configuration);
       robot->computeForwardKinematics ();
-      comc->compute (model::Device::COM);
+      comc->compute (Device::COM);
       JointPtr_t joint1 = leftAnkle;
       JointPtr_t joint2 = rightAnkle;
       const Transform3f& M1 = joint1->currentTransformation ();
       const Transform3f& M2 = joint2->currentTransformation ();
-      // matrix3_t R1T (M1.getRotation ()); R1T.transpose ();
+      // matrix3_t R1T (M1.rotation ().transpose ());
       const vector3_t& x = comc->com ();
       // position of center of mass in left ankle frame
       std::vector <ComparisonType::Type> comps = list_of (ComparisonType::EqualToZero)

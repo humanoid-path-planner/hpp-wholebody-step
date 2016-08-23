@@ -25,14 +25,15 @@
 
 #include <hpp/constraints/symbolic-function.hh>
 
-#include <hpp/model/humanoid-robot.hh>
-#include <hpp/model/joint.hh>
-#include <hpp/model/center-of-mass-computation.hh>
+#include <hpp/pinocchio/humanoid-robot.hh>
+#include <hpp/pinocchio/joint.hh>
+#include <hpp/pinocchio/center-of-mass-computation.hh>
 
 #include <hpp/core/problem.hh>
 #include <hpp/core/path-vector.hh>
 #include <hpp/core/straight-path.hh>
 #include <hpp/core/constraint-set.hh>
+#include <hpp/core/numerical-constraint.hh>
 #include <hpp/core/config-projector.hh>
 #include <hpp/core/path-validation.hh>
 #include <hpp/core/path-validation-report.hh>
@@ -292,26 +293,25 @@ namespace hpp {
       getStepParameters (path);
       // Create pattern generator with height of center of mass
       // and compute initial and final COM state
-      model::CenterOfMassComputationPtr_t comComp = model::CenterOfMassComputation::
+      pinocchio::CenterOfMassComputationPtr_t comComp = pinocchio::CenterOfMassComputation::
         create (robot_);
       comComp->add (robot_->waist()->parentJoint ());
-      comComp->computeMass ();
 
       robot_->currentConfiguration (path->initial ());
       robot_->computeForwardKinematics ();
-      comComp->compute (model::Device::COM);
+      comComp->compute (pinocchio::Device::COM);
       vector_t comInitPos(2); comInitPos << comComp->com()[0], comComp->com()[1];
       value_type comH = comComp->com () [2];
       robot_->currentConfiguration (path->end ());
       robot_->computeForwardKinematics ();
-      comComp->compute (model::Device::COM);
+      comComp->compute (pinocchio::Device::COM);
       vector_t comEndPos(2); comEndPos << comComp->com()[0], comComp->com()[1];
       vector_t comVelocity (vector_t::Zero (2));
 
-      value_type ankleShift = robot_->leftAnkle()->currentTransformation ().getTranslation () [2];
-      if (std::abs (ankleShift - robot_->rightAnkle()->currentTransformation ().getTranslation () [2]) > 1e-6) {
+      value_type ankleShift = robot_->leftAnkle()->currentTransformation ().translation () [2];
+      if (std::abs (ankleShift - robot_->rightAnkle()->currentTransformation ().translation () [2]) > 1e-6) {
         hppDout (error, "Left and right ankle are not at the same height. Difference is "
-            << std::abs (ankleShift - robot_->rightAnkle()->currentTransformation ().getTranslation () [2]));
+            << std::abs (ankleShift - robot_->rightAnkle()->currentTransformation ().translation () [2]));
       }
       pg_ = SplineBased::create (comH);
       pg_->defaultStepHeight (defaultStepHeight_);
@@ -397,10 +397,10 @@ namespace hpp {
       if (right) a = robot_->rightAnkle ();
       else       a = robot_->leftAnkle ();
       value_type xf, yf, cf, sf;
-      xf = a->currentTransformation ().getTranslation () [0];
-      yf = a->currentTransformation ().getTranslation () [1];
-      cf = a->currentTransformation ().getRotation () (0,0);
-      sf = a->currentTransformation ().getRotation () (1,0);
+      xf = a->currentTransformation ().translation () [0];
+      yf = a->currentTransformation ().translation () [1];
+      cf = a->currentTransformation ().rotation () (0,0);
+      sf = a->currentTransformation ().rotation () (1,0);
       return FootPrint (xf, yf, cf, sf);
     }
 
@@ -431,10 +431,9 @@ namespace hpp {
       core::ComparisonTypePtr_t equals = core::Equality::create ();
 
       // Create the time varying equation for COM
-      model::CenterOfMassComputationPtr_t comComp = model::CenterOfMassComputation::
+      pinocchio::CenterOfMassComputationPtr_t comComp = pinocchio::CenterOfMassComputation::
         create (robot_);
       comComp->add (robot_->waist()->parentJoint ());
-      comComp->computeMass ();
       PointComFunctionPtr_t comFunc = PointComFunction::create ("COM-walkgen",
           robot_, PointCom::create (comComp));
       NumericalConstraintPtr_t comEq = NumericalConstraint::create (comFunc, equals);

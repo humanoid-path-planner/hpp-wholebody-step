@@ -27,7 +27,7 @@
 
 namespace hpp {
   namespace wholebodyStep {
-    typedef model::JointPtr_t JointPtr_t;
+    typedef pinocchio::JointPtr_t JointPtr_t;
 
     typedef core::EquationPtr_t EquationPtr_t;
     typedef core::NumericalConstraint NumericalConstraint;
@@ -58,21 +58,21 @@ namespace hpp {
     typedef core::StraightPath StraightPath;
     typedef core::StraightPathPtr_t StraightPathPtr_t;
 
-    typedef model::CenterOfMassComputationPtr_t CenterOfMassComputationPtr_t;
+    typedef pinocchio::CenterOfMassComputationPtr_t CenterOfMassComputationPtr_t;
 
-    typedef model::JointPtr_t JointPtr_t;
-    typedef model::DevicePtr_t DevicePtr_t;
-    typedef model::HumanoidRobotPtr_t HumanoidRobotPtr_t;
-    typedef model::HumanoidRobot HumanoidRobot;
+    typedef pinocchio::JointPtr_t JointPtr_t;
+    typedef pinocchio::DevicePtr_t DevicePtr_t;
+    typedef pinocchio::HumanoidRobotPtr_t HumanoidRobotPtr_t;
+    typedef pinocchio::HumanoidRobot HumanoidRobot;
 
-    typedef model::Configuration_t Configuration_t;
-    typedef model::ConfigurationIn_t ConfigurationIn_t;
-    typedef model::ConfigurationOut_t ConfigurationOut_t;
-    typedef model::Transform3f Transform3f;
-    typedef model::matrix3_t matrix3_t;
-    typedef model::vector3_t vector3_t;
-    typedef model::vector_t vector_t;
-    typedef model::vectorOut_t vectorOut_t;
+    typedef core::Configuration_t Configuration_t;
+    typedef core::ConfigurationIn_t ConfigurationIn_t;
+    typedef core::ConfigurationOut_t ConfigurationOut_t;
+    typedef core::Transform3f Transform3f;
+    typedef core::matrix3_t matrix3_t;
+    typedef core::vector3_t vector3_t;
+    typedef core::vector_t vector_t;
+    typedef core::vectorOut_t vectorOut_t;
     typedef core::value_type value_type;
     typedef core::size_type size_type;
 
