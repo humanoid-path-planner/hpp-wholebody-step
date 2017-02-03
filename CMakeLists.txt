@@ -43,8 +43,8 @@ ENDIF()
 
 SETUP_PROJECT()
 
-ADD_DOC_DEPENDENCY("hpp-constraints >= 3")
-ADD_REQUIRED_DEPENDENCY("hpp-core >= 3")
+ADD_DOC_DEPENDENCY("hpp-constraints >= 4")
+ADD_REQUIRED_DEPENDENCY("hpp-core >= 4")
 ADD_REQUIRED_DEPENDENCY("hpp-walkgen")
 
 ADD_SUBDIRECTORY(src)
