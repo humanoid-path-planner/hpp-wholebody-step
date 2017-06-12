@@ -89,11 +89,16 @@ namespace hpp {
         void updateAbscissa (value_type t) const
         {
           const value_type y = a_*t + b_;
+          ConfigProjectorPtr_t cp;
+          if (constraints()) cp = constraints()->configProjector ();
           for (TimeDependants_t::const_iterator it = tds_.begin ();
-              it != tds_.end (); ++it)
+              it != tds_.end (); ++it) {
             it->rhsAbscissa (y);
-          if (constraints() && constraints()->configProjector ())
-              constraints()->configProjector ()->updateRightHandSide ();
+            NumericalConstraintPtr_t nm = HPP_DYNAMIC_PTR_CAST(NumericalConstraint, it->eq_);
+            if (cp && nm) {
+              cp->rightHandSide(nm, nm->rightHandSide());
+            }
+          }
         }
 
       protected:
