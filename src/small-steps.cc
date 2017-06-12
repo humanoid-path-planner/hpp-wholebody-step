@@ -485,7 +485,7 @@ namespace hpp {
           leftHand .updateAbscissa (T);
           rightHand.updateAbscissa (T);
         }
-        proj->updateRightHandSide ();
+        // TODO proj->updateRightHandSide ();
         bool success = constraints->apply (qe);
         if (!success) {
           failureParameter = T;
@@ -526,15 +526,17 @@ namespace hpp {
 
       /// Copy the numerical constraints
       core::NumericalConstraints_t nc = oldProj->numericalConstraints ();
-      core::IntervalsContainer_t pd = oldProj->passiveDofs ();
+      //TODO core::IntervalsContainer_t pd = oldProj->passiveDofs ();
       core::NumericalConstraints_t::const_iterator it;
-      core::IntervalsContainer_t::const_iterator itPdofs = pd.begin ();
+      // TODO core::IntervalsContainer_t::const_iterator itPdofs = pd.begin ();
       for (it = nc.begin (); it != nc.end (); ++it) {
         if ((*it)->function().context () != STABILITY_CONTEXT) {
-          newProj->add (*it, *itPdofs);
+          // TODO newProj->add (*it, *itPdofs);
+          newProj->add (*it);
         }
-        itPdofs++;
+        // TODO itPdofs++;
       }
+      hppDout (warning, "Passive dofs are not copied anymore.");
       /// Copy the locked joints
       core::LockedJoints_t lj = oldProj->lockedJoints ();
       for (core::LockedJoints_t::const_iterator it = lj.begin ();
