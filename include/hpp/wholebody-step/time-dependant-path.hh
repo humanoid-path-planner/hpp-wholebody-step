@@ -46,7 +46,7 @@ namespace hpp {
         static TimeDependantPathPtr_t createCopy (const TimeDependantPath& other)
         {
           TimeDependantPathPtr_t ptr (new TimeDependantPath (other));
-          ptr->initCopy (ptr);
+          ptr->init (ptr);
           return ptr;
         }
 
@@ -54,7 +54,7 @@ namespace hpp {
             const ConstraintSetPtr_t& c)
         {
           TimeDependantPathPtr_t ptr (new TimeDependantPath (other, c));
-          ptr->initCopy (ptr);
+          ptr->init (ptr);
           return ptr;
         }
 
@@ -137,11 +137,6 @@ namespace hpp {
         void init (const TimeDependantPathPtr_t& self)
         {
           Path::init (self);
-        }
-
-        void initCopy (const TimeDependantPathPtr_t& self)
-        {
-          Path::initCopy (self);
         }
 
         virtual std::ostream& print (std::ostream& os) const {
