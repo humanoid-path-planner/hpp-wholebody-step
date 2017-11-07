@@ -83,7 +83,7 @@ BOOST_AUTO_TEST_CASE (constraints)
 
   ConfigProjectorPtr_t proj = ConfigProjector::create (hrp2, "projector", 1e-4, 20);
   for (std::size_t i = 0; i < ncs.size (); ++i) {
-    proj->add (ncs[i], hpp::core::SizeIntervals_t (0), 0);
+    proj->add (ncs[i], hpp::core::segments_t (0), 0);
   }
   BasicConfigurationShooterPtr_t shooter = BasicConfigurationShooter::create (hrp2);
 
@@ -116,7 +116,7 @@ BOOST_AUTO_TEST_CASE (constraints)
 
   ConfigProjectorPtr_t projOpt = HPP_STATIC_PTR_CAST (ConfigProjector,
       proj->copy ());
-  projOpt->add (cc, hpp::core::SizeIntervals_t (0), 1);
+  projOpt->add (cc, hpp::core::segments_t (0), 1);
   projOpt->lastIsOptional (true);
 
   success = 0;
