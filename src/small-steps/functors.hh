@@ -58,7 +58,9 @@ namespace hpp {
         assert (path_);
         if (!(*path_) (tmp, input))
           throw std::runtime_error ("Could not apply constraints");
-        (*sf_) (result, tmp);
+        LiegroupElement lge (sf_->outputSpace ());
+        sf_->value (lge, tmp);
+        result = lge.vector ();
         result[2] -= shiftH_;
       }
     };
@@ -79,7 +81,9 @@ namespace hpp {
         assert (path_);
         if (!(*path_) (tmp, newToOld_ (input)))
           throw std::runtime_error ("Could not apply constraints");
-        (*func_) (result, tmp);
+        LiegroupElement lge (func_->outputSpace ());
+        func_->value (lge, tmp);
+        result = lge.vector ();
       }
     };
 

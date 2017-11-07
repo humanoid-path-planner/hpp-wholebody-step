@@ -64,6 +64,9 @@ namespace hpp {
     typedef pinocchio::DevicePtr_t DevicePtr_t;
     typedef pinocchio::HumanoidRobotPtr_t HumanoidRobotPtr_t;
     typedef pinocchio::HumanoidRobot HumanoidRobot;
+    typedef pinocchio::LiegroupElement LiegroupElement;
+    typedef pinocchio::LiegroupSpace LiegroupSpace;
+    typedef pinocchio::LiegroupSpacePtr_t LiegroupSpacePtr_t;
 
     typedef core::Configuration_t Configuration_t;
     typedef core::ConfigurationIn_t ConfigurationIn_t;
