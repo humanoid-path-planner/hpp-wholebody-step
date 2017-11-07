@@ -224,20 +224,20 @@ BOOST_AUTO_TEST_CASE (static_stability)
   BasicConfigurationShooterPtr_t shooter = BasicConfigurationShooter::create (hrp2);
 
   ConfigurationPtr_t q1, q2 = shooter->shoot();
-  vector_t value1, value2, dvalue, error;
+  vector_t dvalue, error;
   vector_t errorNorm (MAX_NB_ERROR);
   vector_t dq (hrp2->numberDof ()); dq.setZero ();
   matrix_t jacobian;
   BOOST_MESSAGE ("Number of check: " << NUMBER_JACOBIAN_CALCULUS * hrp2->numberDof ());
   for (DFs::iterator fit = functions.begin(); fit != functions.end(); ++fit) {
     DF& f = *(fit->second);
-    value1 = vector_t (f.outputSize ());
-    value2 = vector_t (f.outputSize ());
+    LiegroupElement value1 (f.outputSpace ());
+    LiegroupElement value2 (f.outputSpace ());
     errorNorm.setZero ();
     jacobian = matrix_t (f.outputSize (), hrp2->numberDof ());
     for (size_t i = 0; i < NUMBER_JACOBIAN_CALCULUS; i++) {
       q1 = shooter->shoot ();
-      f (value1, *q1);
+      f.value (value1, *q1);
       jacobian.setZero ();
       f.jacobian (jacobian, *q1);
       // We check the jacobian for each DOF.
@@ -251,8 +251,8 @@ BOOST_AUTO_TEST_CASE (static_stability)
           //dq[idof] = DQ_MAX * std::pow (10, - i_error);
           dq[idof] = dq[idof] / 10;
           hpp::pinocchio::integrate (hrp2, *q1, dq, *q2);
-          f (value2, *q2);
-          error = value2 - value1 - dq[idof] * dvalue;
+          f.value (value2, *q2);
+          error = (value2 - value1) - dq[idof] * dvalue;
           errorNorm [i_error] = error.norm ();
           if (errorNorm [i_error] < 0.5 * dq[idof] * dq[idof] * HESSIAN_MAXIMUM_COEF)
             break;
