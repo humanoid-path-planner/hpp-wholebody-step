@@ -19,6 +19,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 SET(CUSTOM_HEADER_DIR "hpp/wholebody-step")
 INCLUDE(cmake/base.cmake)
 INCLUDE(cmake/boost.cmake)
+INCLUDE(cmake/test.cmake)
 
 SET(PROJECT_NAME hpp-wholebody-step)
 SET(PROJECT_DESCRIPTION
@@ -43,12 +44,15 @@ ENDIF()
 
 SETUP_PROJECT()
 
+SET (BOOST_COMPONENTS "unit_test_framework")
+SEARCH_FOR_BOOST()
+
 ADD_DOC_DEPENDENCY("hpp-constraints >= 4")
 ADD_REQUIRED_DEPENDENCY("hpp-core >= 4")
 ADD_REQUIRED_DEPENDENCY("hpp-walkgen")
 
 ADD_SUBDIRECTORY(src)
-ADD_SUBDIRECTORY(tests EXCLUDE_FROM_ALL)
+ADD_SUBDIRECTORY(tests)
 
 # Add dependency toward hpp-wholebody-step library in pkg-config file.
 PKG_CONFIG_APPEND_LIBS("hpp-wholebody-step")
