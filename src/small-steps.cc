@@ -114,7 +114,8 @@ namespace hpp {
           // Position only
           func = PointInJointFunction::create
             ("point-hand-walkgen", robot, PointInJoint::create (joint, vector3_t (0,0,0)));
-          eq = NumericalConstraint::create (func, core::Equality::create ());
+          eq = NumericalConstraint::create (func,
+              constraints::ComparisonTypes_t(3, constraints::Equality));
           TD = TimeDependant (eq, RightHandSideFunctorPtr_t
               (new ReproducePath (func, path, param))
               );
@@ -428,7 +429,7 @@ namespace hpp {
       assert (robot_);
       const TimeToParameterMap_t& TTP = param.pairs_;
 
-      core::ComparisonTypePtr_t equals = core::Equality::create ();
+      constraints::ComparisonTypes_t equals (3, constraints::Equality);
 
       // Create the time varying equation for COM
       pinocchio::CenterOfMassComputationPtr_t comComp = pinocchio::CenterOfMassComputation::
@@ -440,6 +441,7 @@ namespace hpp {
       TimeDependant comEqTD (comEq, RightHandSideFunctorPtr_t (new CubicBSplineToCom (com, comHeight)));
 
       // Create an time varying equation for each foot.
+      equals.resize (6, constraints::Equality);
       JointFrameFunctionPtr_t leftFunc = JointFrameFunction::create ("left-foot-walkgen",
           robot_, JointFrame::create (robot_->leftAnkle ()));
       NumericalConstraintPtr_t leftEq = NumericalConstraint::create (leftFunc, equals);

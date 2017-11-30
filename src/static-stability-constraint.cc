@@ -55,8 +55,7 @@ namespace hpp {
     using hpp::pinocchio::Device;
     using hpp::pinocchio::CenterOfMassComputation;
     using hpp::core::NumericalConstraint;
-    using hpp::core::ComparisonType;
-    using hpp::core::ComparisonTypes;
+    using hpp::core::ComparisonTypes_t;
 
     typedef std::vector<bool> BoolVector_t;
     using boost::assign::list_of;
@@ -136,13 +135,13 @@ namespace hpp {
       result.push_back (NumericalConstraint::create (Orientation::create
             ("Left foot rz orientation", robot, joint1, MId,
              list_of (false)(false)(true).convert_to_container<BoolVector_t>()),
-          core::Equality::create ()));
+          ComparisonTypes_t(1, constraints::Equality)));
       result.back ()->function ().context (STABILITY_CONTEXT);
       // Position of the left foot
       result.push_back (NumericalConstraint::create (Position::create
             ("Left foot xy position", robot, joint1, MId, toSE3(M1.translation()),
              list_of (true)(true)(false).convert_to_container<BoolVector_t>()),
-          core::Equality::create ()));
+          ComparisonTypes_t(2, constraints::Equality)));
       result.back ()->function ().context (STABILITY_CONTEXT);
       return result;
     }
@@ -205,13 +204,14 @@ namespace hpp {
       // matrix3_t R1T (M1.rotation ().transpose ());
       const vector3_t& x = comc->com ();
       // position of center of mass in left ankle frame
-      std::vector <ComparisonType::Type> comps = list_of (ComparisonType::EqualToZero)
-       (ComparisonType::EqualToZero) (ComparisonType::Superior)(ComparisonType::Inferior);
+      ComparisonTypes_t comps = list_of
+        (constraints::EqualToZero) (constraints::EqualToZero)
+        (constraints::Superior)    (constraints::Inferior);
       nm = NumericalConstraint::create (
           ComBetweenFeet::create ("ComBetweenFeet", robot, comc,
             joint1, joint2, zero, zero, robot->rootJoint (), x,
             list_of (true)(true)(true)(true).convert_to_container<BoolVector_t>()),
-          ComparisonTypes::create (comps)
+          comps
           );
       result.push_back (nm);
       result.back ()->function ().context (STABILITY_CONTEXT);
