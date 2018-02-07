@@ -89,7 +89,7 @@ BOOST_AUTO_TEST_CASE (constraints)
 
   /// Compute a vector of configurations
   const std::size_t NB_CONF = 100;
-  std::vector <ConfigurationPtr_t> configs (100);
+  std::vector <ConfigurationPtr_t> configs (NB_CONF);
   for (std::size_t i = 0; i < configs.size(); ++i)
     configs[i] = shooter->shoot ();
 
@@ -153,8 +153,9 @@ BOOST_AUTO_TEST_CASE (constraints)
 BOOST_AUTO_TEST_CASE (static_stability)
 {
   HumanoidRobotPtr_t hrp2 = HumanoidRobot::create ("hrp2");
-  loadHumanoidModel (hrp2, "freeflyer", "hrp2_14_description",
+  loadRobotModel (hrp2, "freeflyer", "hrp2_14_description",
       "hrp2_14", "_capsule_mesh", "");
+  setupHumanoidRobot (hrp2, "");
   for (std::size_t i = 0; i < 3; ++i) {
     hrp2->rootJoint ()->lowerBound (i, -1);
     hrp2->rootJoint ()->upperBound (i, +1);
@@ -206,7 +207,6 @@ BOOST_AUTO_TEST_CASE (static_stability)
 
   CenterOfMassComputationPtr_t com = CenterOfMassComputation::create (hrp2);
   com->add (hrp2->rootJoint ());
-  com->computeMass ();
 
   typedef DifferentiableFunction DF;
   typedef std::pair <std::string, DifferentiableFunctionPtr_t> DFptr;
