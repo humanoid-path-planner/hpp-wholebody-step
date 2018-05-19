@@ -24,6 +24,7 @@
 #include "hpp/pinocchio/center-of-mass-computation.hh"
 #include "hpp/pinocchio/joint.hh"
 #include "hpp/pinocchio/configuration.hh"
+#include <hpp/pinocchio/simple-device.hh>
 #include "hpp/constraints/configuration-constraint.hh"
 #include "hpp/constraints/static-stability.hh"
 #include "hpp/constraints/relative-com.hh"
@@ -39,53 +40,62 @@ using hpp::pinocchio::matrix_t;
 
 using hpp::pinocchio::HumanoidRobot;
 using hpp::pinocchio::HumanoidRobotPtr_t;
+using hpp::pinocchio::Configuration_t;
+using hpp::pinocchio::ConfigurationPtr_t;
+using hpp::pinocchio::CenterOfMassComputation;
+using hpp::pinocchio::CenterOfMassComputationPtr_t;
+using hpp::pinocchio::Device;
 using hpp::core::ConfigProjector;
 using hpp::core::ConfigProjectorPtr_t;
 using hpp::core::NumericalConstraint;
 using hpp::core::NumericalConstraintPtr_t;
 using hpp::core::BasicConfigurationShooter;
 using hpp::core::BasicConfigurationShooterPtr_t;
-using hpp::pinocchio::Configuration_t;
-using hpp::pinocchio::ConfigurationPtr_t;
-using hpp::pinocchio::CenterOfMassComputation;
-using hpp::pinocchio::CenterOfMassComputationPtr_t;
 using hpp::constraints::StaticStability;
 using hpp::constraints::StaticStabilityPtr_t;
 using hpp::constraints::RelativeCom;
 
 const static size_t NUMBER_JACOBIAN_CALCULUS = 20;
-const static double HESSIAN_MAXIMUM_COEF = 5e2;
+const static double HESSIAN_MAXIMUM_COEF = 5e3;
 const static double DQ_MAX = 1e-4;
 const static size_t MAX_NB_ERROR = 5;
 
+HumanoidRobotPtr_t createRobot ()
+{
+  HumanoidRobotPtr_t robot = HPP_DYNAMIC_PTR_CAST
+    (HumanoidRobot, hpp::pinocchio::unittest::makeDevice
+     (hpp::pinocchio::unittest::HumanoidRomeo));
+  robot->controlComputation((Device::Computation_t)
+                            (Device::JOINT_POSITION | Device::JACOBIAN));
+  for (std::size_t i = 0; i < 3; ++i) {
+    robot->rootJoint ()->lowerBound (i, -1);
+    robot->rootJoint ()->upperBound (i, +1);
+  }
+  return robot;
+}
+
 BOOST_AUTO_TEST_CASE (constraints)
 {
-  HumanoidRobotPtr_t hrp2 = HumanoidRobot::create ("hrp2");
-  loadRobotModel(hrp2, 0, "", "freeflyer",
-      "hrp2_14_description", "hrp2_14", "_capsule_mesh", "");
-  setupHumanoidRobot (hrp2, "");
-  for (std::size_t i = 0; i < 3; ++i) {
-    hrp2->rootJoint ()->lowerBound (i, -1);
-    hrp2->rootJoint ()->upperBound (i, +1);
-    hrp2->rootJoint ()->isBounded  (i, true);
-  }
+  HumanoidRobotPtr_t hrp2 = createRobot ();
   Configuration_t half_sitting (hrp2->configSize ());
-  half_sitting << 0.0 , 0.0 , 0.648702 , 1.0 , 0.0 , 0.0 ,
-    0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.261799 , 0.17453 , 0.0 , -0.523599 ,
-    0.0 , 0.0 , 0.75 , -0.75 , 0.75 , -0.75 , 0.75 , -0.75 , 0.261799 ,
-    -0.17453 , 0.0 , -0.523599 , 0.0 , 0.0 , 0.1 , 0.0 , 0.0 , 0.0 ,
-    0.0 , 0.0 , 0.0 , 0.0 , -0.453786 , 0.872665 , -0.418879 , 0.0 ,
-    0.0 , 0.0 , -0.453786 , 0.872665 , -0.418879 , 0.0;
+  half_sitting << 0, 0, 0.840252, 0, 0, 0, 1, 0, 0, -0.3490658, 0.6981317,
+    -0.3490658, 0, 0, 0, -0.3490658, 0.6981317, -0.3490658, 0, 0, 1.5, 0.6,
+    -0.5, -1.05, -0.4, -0.3, -0.2, 0, 0, 0, 0, 1.5, -0.6, 0.5, 1.05, -0.4,
+    -0.3, -0.2;
   BOOST_MESSAGE (half_sitting.transpose ());
 
-  std::vector <NumericalConstraintPtr_t> ncs = createSlidingStabilityConstraint
-    (hrp2, hrp2->leftAnkle (), hrp2->rightAnkle(), half_sitting);
+  CenterOfMassComputationPtr_t com = CenterOfMassComputation::create (hrp2);
+  com->add (hrp2->rootJoint ());
+
+  std::vector <NumericalConstraintPtr_t> ncs = createStaticStabilityConstraint
+    (hrp2, com, hrp2->leftAnkle (), hrp2->rightAnkle(), half_sitting, true);
 
   ConfigProjectorPtr_t proj = ConfigProjector::create (hrp2, "projector", 1e-4, 20);
   for (std::size_t i = 0; i < ncs.size (); ++i) {
     proj->add (ncs[i], hpp::core::segments_t (0), 0);
   }
-  BasicConfigurationShooterPtr_t shooter = BasicConfigurationShooter::create (hrp2);
+  BasicConfigurationShooterPtr_t shooter =
+    BasicConfigurationShooter::create (hrp2);
 
   /// Compute a vector of configurations
   const std::size_t NB_CONF = 100;
@@ -152,15 +162,7 @@ BOOST_AUTO_TEST_CASE (constraints)
 
 BOOST_AUTO_TEST_CASE (static_stability)
 {
-  HumanoidRobotPtr_t hrp2 = HumanoidRobot::create ("hrp2");
-  loadRobotModel (hrp2, "freeflyer", "hrp2_14_description",
-      "hrp2_14", "_capsule_mesh", "");
-  setupHumanoidRobot (hrp2, "");
-  for (std::size_t i = 0; i < 3; ++i) {
-    hrp2->rootJoint ()->lowerBound (i, -1);
-    hrp2->rootJoint ()->upperBound (i, +1);
-    hrp2->rootJoint ()->isBounded  (i, true);
-  }
+  HumanoidRobotPtr_t hrp2 = createRobot ();
 
   // Create the contacts
   const double feetS = 0.03;
@@ -227,6 +229,7 @@ BOOST_AUTO_TEST_CASE (static_stability)
   vector_t dvalue, error;
   vector_t errorNorm (MAX_NB_ERROR);
   vector_t dq (hrp2->numberDof ()); dq.setZero ();
+
   matrix_t jacobian;
   BOOST_MESSAGE ("Number of check: " << NUMBER_JACOBIAN_CALCULUS * hrp2->numberDof ());
   for (DFs::iterator fit = functions.begin(); fit != functions.end(); ++fit) {
@@ -254,12 +257,16 @@ BOOST_AUTO_TEST_CASE (static_stability)
           f.value (value2, *q2);
           error = (value2 - value1) - dq[idof] * dvalue;
           errorNorm [i_error] = error.norm ();
-          if (errorNorm [i_error] < 0.5 * dq[idof] * dq[idof] * HESSIAN_MAXIMUM_COEF)
+          if (errorNorm [i_error] < 0.5 * dq[idof] * dq[idof] * HESSIAN_MAXIMUM_COEF) {
             break;
+          }
         }
-        BOOST_CHECK_MESSAGE (i_error != MAX_NB_ERROR,
-              "Constraint " << fit->first << ": error norm " << errorNorm [MAX_NB_ERROR - 1] / dq[idof]
-              << ", dof " << idof << ", config " << i << ".");
+        BOOST_CHECK_MESSAGE
+          (i_error != MAX_NB_ERROR, "Constraint " << fit->first
+           << ": error norm " << errorNorm [MAX_NB_ERROR - 1] / dq[idof]
+           << ", dof " << idof << ", config "
+           << hpp::pinocchio::displayConfig (*q1) << ", dq [idof] "
+           << dq [idof] << ".");
         dq(idof) = 0;
       }
     }
