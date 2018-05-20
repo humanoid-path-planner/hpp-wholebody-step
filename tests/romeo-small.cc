@@ -56,7 +56,7 @@ using hpp::constraints::StaticStabilityPtr_t;
 using hpp::constraints::RelativeCom;
 
 const static size_t NUMBER_JACOBIAN_CALCULUS = 20;
-const static double HESSIAN_MAXIMUM_COEF = 5e3;
+const static double HESSIAN_MAXIMUM_COEF = 1000.;
 const static double DQ_MAX = 1e-4;
 const static size_t MAX_NB_ERROR = 5;
 
