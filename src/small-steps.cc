@@ -568,7 +568,6 @@ namespace hpp {
       };
 
       // Find in which phase we are
-      const value_type timeInPath = param(invalid_time);
       Times_t::iterator _time =
         std::lower_bound (times.begin(), times.end(), invalid_time);
       // i_time >= 1
@@ -626,7 +625,7 @@ namespace hpp {
       stepParameters_.insert (_step_Before + 1, newSPs.begin (), newSPs.end ());
 
       const std::size_t nbStep = std::distance(_step_Before, _step_After);
-      const value_type step = stepUnchanged / ( nbStep + 2);
+      const value_type step = stepUnchanged / (value_type) ( nbStep + 2);
       for (std::size_t i = 0; i < nbStep + 1; ++i)
         stepParameters_[ib_sp + i] = stepParameters_[ib_sp - 1 + i] + step;
       if (std::abs (stepParameters_[ib_sp + nbStep + 1] - stepParameters_[ib_sp + nbStep] - step) > 1e-6) {

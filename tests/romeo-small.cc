@@ -29,7 +29,7 @@
 #include <hpp/constraints/implicit.hh>
 #include "hpp/constraints/static-stability.hh"
 #include "hpp/constraints/relative-com.hh"
-#include "hpp/core/basic-configuration-shooter.hh"
+#include "hpp/core/configuration-shooter/uniform.hh"
 #include "hpp/core/config-projector.hh"
 
 #include "hpp/wholebody-step/static-stability-constraint.hh"
@@ -94,8 +94,8 @@ BOOST_AUTO_TEST_CASE (constraints)
   for (std::size_t i = 0; i < ncs.size (); ++i) {
     proj->add (ncs[i], hpp::core::segments_t (0), 0);
   }
-  BasicConfigurationShooterPtr_t shooter =
-    BasicConfigurationShooter::create (hrp2);
+  UniformPtr_t shooter =
+    Uniform::create (hrp2);
 
   /// Compute a vector of configurations
   const std::size_t NB_CONF = 100;
@@ -223,7 +223,7 @@ BOOST_AUTO_TEST_CASE (static_stability)
         RelativeCom::create (hrp2, com, hrp2->leftAnkle(), vector3_t (0,0,0.64))
         ));
 
-  BasicConfigurationShooterPtr_t shooter = BasicConfigurationShooter::create (hrp2);
+  UniformPtr_t shooter = Uniform::create (hrp2);
 
   ConfigurationPtr_t q1, q2 = shooter->shoot();
   vector_t dvalue, error;
