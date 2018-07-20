@@ -27,7 +27,8 @@
 namespace hpp {
   namespace wholebodyStep {
     extern const std::string STABILITY_CONTEXT;
-
+    typedef constraints::Implicit Implicit;
+    typedef constraints::ImplicitPtr_t ImplicitPtr_t;
     /// Create quasi-static stability constraints
     /// \param robot the robot,
     /// \param comc a hpp::pinocchio::CenterOfMassComputation that handle
@@ -49,7 +50,7 @@ namespace hpp {
     ///
     /// All constraints are returned along with the
     /// hpp::core::ComparisonType::createDefault()
-    std::vector <NumericalConstraintPtr_t> createSlidingStabilityConstraint
+    std::vector <ImplicitPtr_t> createSlidingStabilityConstraint
     (const DevicePtr_t& robot, const CenterOfMassComputationPtr_t& comc,
      const JointPtr_t& leftAnkle, const JointPtr_t& rightAnkle,
      ConfigurationIn_t configuration) HPP_WHOLEBODY_STEP_DEPRECATED;
@@ -59,7 +60,7 @@ namespace hpp {
     /// \param robot, leftAnkle, rightAnkle, configuration
     ///        see createSlidingStabilityConstraint(const DevicePtr_t&,
     ///         const JointPtr_t&, const JointPtr_t&, ConfigurationIn_t)
-    std::vector <NumericalConstraintPtr_t> createSlidingStabilityConstraint
+    std::vector <ImplicitPtr_t> createSlidingStabilityConstraint
     (const DevicePtr_t& robot, const JointPtr_t& leftAnkle, 
      const JointPtr_t& rightAnkle, ConfigurationIn_t configuration)
       HPP_WHOLEBODY_STEP_DEPRECATED;
@@ -80,7 +81,7 @@ namespace hpp {
     ///
     /// All constraints are returned along with the
     /// hpp::core::ComparisonType::createDefault()
-    std::vector <NumericalConstraintPtr_t>
+    std::vector <ImplicitPtr_t>
     createSlidingStabilityConstraintComplement
     (const DevicePtr_t& robot, const JointPtr_t& leftAnkle,
      ConfigurationIn_t configuration);
@@ -104,7 +105,7 @@ namespace hpp {
     ///     sliding, dimension 3 otherwise
     /// \li position of the left foot along z (dimension 1) if sliding,
     ///     dimension 3 otherwise.
-    std::vector <NumericalConstraintPtr_t> createAlignedCOMStabilityConstraint
+    std::vector <ImplicitPtr_t> createAlignedCOMStabilityConstraint
     (const DevicePtr_t& robot, const CenterOfMassComputationPtr_t& comc,
      const JointPtr_t& leftAnkle, const JointPtr_t& rightAnkle,
      ConfigurationIn_t configuration, bool sliding = true);
@@ -137,7 +138,7 @@ namespace hpp {
     ///
     /// All constraints are returned along with the
     /// hpp::core::ComparisonType::createDefault()
-    std::vector <NumericalConstraintPtr_t> createStaticStabilityConstraint
+    std::vector <ImplicitPtr_t> createStaticStabilityConstraint
     (const DevicePtr_t& robot, const CenterOfMassComputationPtr_t& comc,
      const JointPtr_t& leftAnkle, const JointPtr_t& rightAnkle,
      ConfigurationIn_t configuration, bool sliding);

@@ -26,10 +26,10 @@
 #include "hpp/pinocchio/configuration.hh"
 #include <hpp/pinocchio/simple-device.hh>
 #include "hpp/constraints/configuration-constraint.hh"
+#include <hpp/constraints/implicit.hh>
 #include "hpp/constraints/static-stability.hh"
 #include "hpp/constraints/relative-com.hh"
 #include "hpp/core/basic-configuration-shooter.hh"
-#include "hpp/core/numerical-constraint.hh"
 #include "hpp/core/config-projector.hh"
 
 #include "hpp/wholebody-step/static-stability-constraint.hh"
@@ -47,10 +47,10 @@ using hpp::pinocchio::CenterOfMassComputationPtr_t;
 using hpp::pinocchio::Device;
 using hpp::core::ConfigProjector;
 using hpp::core::ConfigProjectorPtr_t;
-using hpp::core::NumericalConstraint;
-using hpp::core::NumericalConstraintPtr_t;
-using hpp::core::BasicConfigurationShooter;
-using hpp::core::BasicConfigurationShooterPtr_t;
+using hpp::constraints::Implicit;
+using hpp::constraints::ImplicitPtr_t;
+using hpp::core::configurationShooter::Uniform;
+using hpp::core::configurationShooter::UniformPtr_t;
 using hpp::constraints::StaticStability;
 using hpp::constraints::StaticStabilityPtr_t;
 using hpp::constraints::RelativeCom;
@@ -87,7 +87,7 @@ BOOST_AUTO_TEST_CASE (constraints)
   CenterOfMassComputationPtr_t com = CenterOfMassComputation::create (hrp2);
   com->add (hrp2->rootJoint ());
 
-  std::vector <NumericalConstraintPtr_t> ncs = createStaticStabilityConstraint
+  std::vector <ImplicitPtr_t> ncs = createStaticStabilityConstraint
     (hrp2, com, hrp2->leftAnkle (), hrp2->rightAnkle(), half_sitting, true);
 
   ConfigProjectorPtr_t proj = ConfigProjector::create (hrp2, "projector", 1e-4, 20);
@@ -118,7 +118,7 @@ BOOST_AUTO_TEST_CASE (constraints)
 
   std::vector <bool> mask (hrp2->numberDof(), true);
   for (std::size_t i = 0; i < 6; i++) mask[i] = false;
-  NumericalConstraintPtr_t cc = NumericalConstraint::create
+  ImplicitPtr_t cc = Implicit::create
     (hpp::constraints::ConfigurationConstraint::create
      ("Optimization constraint", hrp2, half_sitting, mask)
     );

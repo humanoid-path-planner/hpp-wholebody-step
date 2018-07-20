@@ -29,9 +29,6 @@ namespace hpp {
   namespace wholebodyStep {
     typedef pinocchio::JointPtr_t JointPtr_t;
 
-    typedef core::EquationPtr_t EquationPtr_t;
-    typedef core::NumericalConstraint NumericalConstraint;
-    typedef core::NumericalConstraintPtr_t NumericalConstraintPtr_t;
     typedef core::ConstraintSet ConstraintSet;
     typedef core::ConstraintSetPtr_t ConstraintSetPtr_t;
     typedef core::ConfigProjector ConfigProjector;

@@ -23,6 +23,7 @@
 
 #include <hpp/util/debug.hh>
 
+#include <hpp/constraints/implicit.hh>
 #include <hpp/constraints/symbolic-function.hh>
 
 #include <hpp/pinocchio/humanoid-robot.hh>
@@ -33,7 +34,6 @@
 #include <hpp/core/path-vector.hh>
 #include <hpp/core/straight-path.hh>
 #include <hpp/core/constraint-set.hh>
-#include <hpp/core/numerical-constraint.hh>
 #include <hpp/core/config-projector.hh>
 #include <hpp/core/path-validation.hh>
 #include <hpp/core/path-validation-report.hh>
@@ -100,7 +100,7 @@ namespace hpp {
         SmallSteps::HandConstraint& model;
 
         DifferentiableFunctionPtr_t func;
-        NumericalConstraintPtr_t eq;
+        constraints::ImplicitPtr_t eq;
         TimeDependant TD;
 
         HandConstraintData (SmallSteps::HandConstraint& m) :
@@ -114,7 +114,7 @@ namespace hpp {
           // Position only
           func = PointInJointFunction::create
             ("point-hand-walkgen", robot, PointInJoint::create (joint, vector3_t (0,0,0)));
-          eq = NumericalConstraint::create (func,
+          eq = constraints::Implicit::create (func,
               constraints::ComparisonTypes_t(3, constraints::Equality));
           TD = TimeDependant (eq, RightHandSideFunctorPtr_t
               (new ReproducePath (func, path, param))
@@ -437,21 +437,22 @@ namespace hpp {
       comComp->add (robot_->waist()->parentJoint ());
       PointComFunctionPtr_t comFunc = PointComFunction::create ("COM-walkgen",
           robot_, PointCom::create (comComp));
-      NumericalConstraintPtr_t comEq = NumericalConstraint::create (comFunc, equals);
+      constraints::ImplicitPtr_t comEq = constraints::Implicit::create
+        (comFunc, equals);
       TimeDependant comEqTD (comEq, RightHandSideFunctorPtr_t (new CubicBSplineToCom (com, comHeight)));
 
       // Create an time varying equation for each foot.
       equals.resize (6, constraints::Equality);
       JointFrameFunctionPtr_t leftFunc = JointFrameFunction::create ("left-foot-walkgen",
           robot_, JointFrame::create (robot_->leftAnkle ()));
-      NumericalConstraintPtr_t leftEq = NumericalConstraint::create (leftFunc, equals);
+      constraints::ImplicitPtr_t leftEq = constraints::Implicit::create (leftFunc, equals);
       TimeDependant leftEqTD (leftEq, RightHandSideFunctorPtr_t
           (new FootPathToFootPos (pg_->leftFoot (), pg_->leftFootTrajectory (), ankleShift))
           );
 
       JointFrameFunctionPtr_t rightFunc = JointFrameFunction::create ("right-foot-walkgen",
           robot_, JointFrame::create (robot_->rightAnkle ()));
-      NumericalConstraintPtr_t rightEq = NumericalConstraint::create (rightFunc, equals);
+      constraints::ImplicitPtr_t rightEq = constraints::Implicit::create (rightFunc, equals);
       TimeDependant rightEqTD (rightEq, RightHandSideFunctorPtr_t
           (new FootPathToFootPos (pg_->rightFoot (), pg_->rightFootTrajectory (), ankleShift))
           );

@@ -19,12 +19,13 @@
 #ifndef HPP_WHOLEBODY_STEP_TIME_DEPENDANT_HH
 # define HPP_WHOLEBODY_STEP_TIME_DEPENDANT_HH
 
-# include <hpp/core/equation.hh>
+# include <hpp/constraints/implicit.hh>
 
 # include <hpp/wholebody-step/fwd.hh>
 
 namespace hpp {
   namespace wholebodyStep {
+    typedef constraints::ImplicitPtr_t ImplicitPtr_t;
     struct HPP_WHOLEBODY_STEP_DLLAPI RightHandSideFunctor {
       virtual void operator() (vectorOut_t output, const value_type& input)
         const = 0;
@@ -38,7 +39,7 @@ namespace hpp {
         (*rhsFunc_) (eq_->nonConstRightHandSide(), s);
       }
 
-      TimeDependant (const EquationPtr_t& eq,
+      TimeDependant (const ImplicitPtr_t& eq,
           const RightHandSideFunctorPtr_t rhs):
         eq_ (eq), rhsFunc_ (rhs)
       {}
@@ -47,7 +48,7 @@ namespace hpp {
         eq_ (other.eq_), rhsFunc_ (other.rhsFunc_)
       {}
 
-      EquationPtr_t eq_;
+      ImplicitPtr_t eq_;
       RightHandSideFunctorPtr_t rhsFunc_;
     }; // class TimeDependant
   } // namespace wholebodyStep

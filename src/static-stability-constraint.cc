@@ -25,7 +25,7 @@
 #include <hpp/pinocchio/device.hh>
 #include <hpp/pinocchio/center-of-mass-computation.hh>
 #include <hpp/core/config-projector.hh>
-#include <hpp/core/numerical-constraint.hh>
+#include <hpp/constraints/implicit.hh>
 #include <hpp/constraints/generic-transformation.hh>
 #include <hpp/constraints/relative-com.hh>
 #include <hpp/constraints/com-between-feet.hh>
@@ -54,7 +54,8 @@ namespace hpp {
     using hpp::constraints::ComBetweenFeet;
     using hpp::pinocchio::Device;
     using hpp::pinocchio::CenterOfMassComputation;
-    using hpp::core::NumericalConstraint;
+    using hpp::constraints::Implicit;
+    using hpp::constraints::ImplicitPtr_t;
     using hpp::core::ComparisonTypes_t;
 
     typedef std::vector<bool> BoolVector_t;
@@ -62,7 +63,7 @@ namespace hpp {
 
     const std::string STABILITY_CONTEXT = "stability";
 
-    std::vector <NumericalConstraintPtr_t> createSlidingStabilityConstraint
+    std::vector <ImplicitPtr_t> createSlidingStabilityConstraint
     (const DevicePtr_t& robot, const JointPtr_t& leftAnkle,
      const JointPtr_t& rightAnkle, ConfigurationIn_t configuration)
     {
@@ -73,12 +74,12 @@ namespace hpp {
         (robot, comc, leftAnkle, rightAnkle, configuration);
     }
 
-    std::vector <NumericalConstraintPtr_t> createSlidingStabilityConstraint
+    std::vector <ImplicitPtr_t> createSlidingStabilityConstraint
     (const DevicePtr_t& robot, const CenterOfMassComputationPtr_t& comc,
      const JointPtr_t& leftAnkle, const JointPtr_t& rightAnkle,
      ConfigurationIn_t configuration)
     {
-      std::vector <NumericalConstraintPtr_t> result;
+      std::vector <ImplicitPtr_t> result;
       robot->currentConfiguration (configuration);
       robot->computeForwardKinematics ();
       comc->compute (Device::COM);
@@ -90,12 +91,12 @@ namespace hpp {
       // position of center of mass in left ankle frame
       matrix3_t R1T (M1.rotation ().transpose());
       vector3_t xloc = R1T * (x - M1.translation ());
-      result.push_back (NumericalConstraint::create (RelativeCom::create
+      result.push_back (Implicit::create (RelativeCom::create
             (robot, comc, joint1, xloc)));
       result.back ()->function ().context (STABILITY_CONTEXT);
       // Relative orientation of the feet
       matrix3_t reference = R1T * M2.rotation ();
-      result.push_back(NumericalConstraint::create (RelativeOrientation::create
+      result.push_back(Implicit::create (RelativeOrientation::create
 		       ("Feet relative orientation", robot, joint1, joint2, toSE3(reference))));
       result.back ()->function ().context (STABILITY_CONTEXT);
       // Relative position of the feet
@@ -105,40 +106,40 @@ namespace hpp {
       // local2  = R2^T (global1 - t2)
       matrix3_t R2T (M2.rotation ().transpose ());
       vector3_t local2 = R2T * (global1 - M2.translation ());
-      result.push_back (NumericalConstraint::create (RelativePosition::create
+      result.push_back (Implicit::create (RelativePosition::create
 			("Feet relative position", robot, joint1, joint2, toSE3(local1), toSE3(local2))));
       result.back ()->function ().context (STABILITY_CONTEXT);
       // Orientation of the left foot
-      result.push_back (NumericalConstraint::create (Orientation::create
+      result.push_back (Implicit::create (Orientation::create
             ("Left foot rx/ry orientation", robot, joint1, MId,
              list_of (true)(true)(false).convert_to_container<BoolVector_t>())));
       result.back ()->function ().context (STABILITY_CONTEXT);
       // Position of the left foot
-      result.push_back (NumericalConstraint::create (Position::create
+      result.push_back (Implicit::create (Position::create
             ("Left foot z position", robot, joint1, MId, toSE3(M1.translation ()),
              list_of (false)(false)(true).convert_to_container<BoolVector_t>())));
       result.back ()->function ().context (STABILITY_CONTEXT);
       return result;
     }
 
-    std::vector <NumericalConstraintPtr_t> createSlidingStabilityConstraintComplement
+    std::vector <ImplicitPtr_t> createSlidingStabilityConstraintComplement
     (const DevicePtr_t& robot, const JointPtr_t& leftAnkle,
      ConfigurationIn_t configuration)
     {
-      std::vector <NumericalConstraintPtr_t> result;
+      std::vector <ImplicitPtr_t> result;
       robot->currentConfiguration (configuration);
       robot->computeForwardKinematics ();
       JointPtr_t joint1 = leftAnkle;
       const Transform3f& M1 = joint1->currentTransformation ();
 
       // Orientation of the left foot
-      result.push_back (NumericalConstraint::create (Orientation::create
+      result.push_back (Implicit::create (Orientation::create
             ("Left foot rz orientation", robot, joint1, MId,
              list_of (false)(false)(true).convert_to_container<BoolVector_t>()),
           ComparisonTypes_t(1, constraints::Equality)));
       result.back ()->function ().context (STABILITY_CONTEXT);
       // Position of the left foot
-      result.push_back (NumericalConstraint::create (Position::create
+      result.push_back (Implicit::create (Position::create
             ("Left foot xy position", robot, joint1, MId, toSE3(M1.translation()),
              list_of (true)(true)(false).convert_to_container<BoolVector_t>()),
           ComparisonTypes_t(2, constraints::Equality)));
@@ -146,7 +147,7 @@ namespace hpp {
       return result;
     }
 
-    std::vector <NumericalConstraintPtr_t> createStaticStabilityConstraint
+    std::vector <ImplicitPtr_t> createStaticStabilityConstraint
     (const DevicePtr_t& robot, const CenterOfMassComputationPtr_t& comc,
      const JointPtr_t& leftAnkle, const JointPtr_t& rightAnkle,
      ConfigurationIn_t configuration, bool sliding)
@@ -156,7 +157,7 @@ namespace hpp {
 	  createSlidingStabilityConstraint (robot, comc, leftAnkle, rightAnkle,
 					    configuration);
       } else {
-	std::vector <NumericalConstraintPtr_t> result;
+	std::vector <ImplicitPtr_t> result;
       robot->currentConfiguration (configuration);
       robot->computeForwardKinematics ();
       comc->compute (Device::COM);
@@ -168,16 +169,16 @@ namespace hpp {
       // position of center of mass in left ankle frame
       matrix3_t R1T (M1.rotation ().transpose ());
       vector3_t xloc = R1T * (x - M1.translation ());
-      result.push_back (NumericalConstraint::create (RelativeCom::create
+      result.push_back (Implicit::create (RelativeCom::create
             (robot, comc, joint1, xloc)));
       result.back ()->function ().context (STABILITY_CONTEXT);
       // pose of the left foot
-      result.push_back (NumericalConstraint::create
+      result.push_back (Implicit::create
 			(constraints::Transformation::create
 			 ("Left foot pose", robot, joint1, M1)));
       result.back ()->function ().context (STABILITY_CONTEXT);
       // pose of the right foot
-      result.push_back (NumericalConstraint::create
+      result.push_back (Implicit::create
 			(constraints::Transformation::create
 			 ("Right foot pose", robot, joint2, M2)));
       result.back ()->function ().context (STABILITY_CONTEXT);
@@ -185,15 +186,15 @@ namespace hpp {
       }
     }
 
-    std::vector <NumericalConstraintPtr_t> createAlignedCOMStabilityConstraint
+    std::vector <ImplicitPtr_t> createAlignedCOMStabilityConstraint
     (const DevicePtr_t& robot, const CenterOfMassComputationPtr_t& comc,
      const JointPtr_t& leftAnkle, const JointPtr_t& rightAnkle,
      ConfigurationIn_t configuration, bool sliding)
     {
       vector3_t zero; zero.setZero ();
 
-      std::vector <NumericalConstraintPtr_t> result;
-      NumericalConstraintPtr_t nm;
+      std::vector <ImplicitPtr_t> result;
+      ImplicitPtr_t nm;
       robot->currentConfiguration (configuration);
       robot->computeForwardKinematics ();
       comc->compute (Device::COM);
@@ -207,7 +208,7 @@ namespace hpp {
       ComparisonTypes_t comps = list_of
         (constraints::EqualToZero) (constraints::EqualToZero)
         (constraints::Superior)    (constraints::Inferior);
-      nm = NumericalConstraint::create (
+      nm = Implicit::create (
           ComBetweenFeet::create ("ComBetweenFeet", robot, comc,
             joint1, joint2, zero, zero, robot->rootJoint (), x,
             list_of (true)(true)(true)(true).convert_to_container<BoolVector_t>()),
@@ -220,13 +221,13 @@ namespace hpp {
 	mask [0] = false; mask [1] = false; mask [5] = false;
       }
       // Pose of the right foot
-      nm = NumericalConstraint::create
+      nm = Implicit::create
 	(constraints::Transformation::create
 	 ("Right foot pose", robot, joint2, M2, mask));
       result.push_back(nm);
       result.back ()->function ().context (STABILITY_CONTEXT);
       // Pose of the left foot
-      nm = NumericalConstraint::create
+      nm = Implicit::create
 	(constraints::Transformation::create
 	 ("Right pose", robot, joint1, M1, mask));
       result.push_back(nm);

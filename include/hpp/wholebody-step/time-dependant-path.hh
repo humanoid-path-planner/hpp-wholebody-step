@@ -25,6 +25,8 @@
 
 namespace hpp {
   namespace wholebodyStep {
+    typedef constraints::Implicit Implicit;
+    typedef constraints::ImplicitPtr_t ImplicitPtr_t;
     class HPP_WHOLEBODY_STEP_DLLAPI TimeDependantPath : public core::Path
     {
       public:
@@ -94,7 +96,7 @@ namespace hpp {
           for (TimeDependants_t::const_iterator it = tds_.begin ();
               it != tds_.end (); ++it) {
             it->rhsAbscissa (y);
-            NumericalConstraintPtr_t nm = HPP_DYNAMIC_PTR_CAST(NumericalConstraint, it->eq_);
+            ImplicitPtr_t nm = HPP_DYNAMIC_PTR_CAST(Implicit, it->eq_);
             if (cp && nm) {
               cp->rightHandSide(nm, nm->rightHandSide());
             }
