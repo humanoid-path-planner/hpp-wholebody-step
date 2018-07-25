@@ -556,7 +556,7 @@ namespace hpp {
     }
 
     bool SmallSteps::narrowAtTime (const value_type& invalid_time, const PathPtr_t& path,
-        const PiecewiseAffine& param, Times_t& times)
+        const PiecewiseAffine&, Times_t& times)
     {
       typedef std::vector <value_type> SPs_t; // Step parameters
       enum Phase {
