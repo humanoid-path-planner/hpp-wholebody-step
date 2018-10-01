@@ -540,12 +540,6 @@ namespace hpp {
         // TODO itPdofs++;
       }
       hppDout (warning, "Passive dofs are not copied anymore.");
-      /// Copy the locked joints
-      core::LockedJoints_t lj = oldProj->lockedJoints ();
-      for (core::LockedJoints_t::const_iterator it = lj.begin ();
-          it != lj.end (); ++it)
-        newProj->add (*it);
-
       /// Copy the other constraints
       for (core::Constraints_t::const_iterator it = orig->begin ();
           it != orig->end (); ++it) {
