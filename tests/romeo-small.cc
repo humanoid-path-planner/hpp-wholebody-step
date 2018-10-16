@@ -82,7 +82,7 @@ BOOST_AUTO_TEST_CASE (constraints)
     -0.3490658, 0, 0, 0, -0.3490658, 0.6981317, -0.3490658, 0, 0, 1.5, 0.6,
     -0.5, -1.05, -0.4, -0.3, -0.2, 0, 0, 0, 0, 1.5, -0.6, 0.5, 1.05, -0.4,
     -0.3, -0.2;
-  BOOST_MESSAGE (half_sitting.transpose ());
+  BOOST_TEST_MESSAGE (half_sitting.transpose ());
 
   CenterOfMassComputationPtr_t com = CenterOfMassComputation::create (hrp2);
   com->add (hrp2->rootJoint ());
@@ -113,7 +113,7 @@ BOOST_AUTO_TEST_CASE (constraints)
           std::setprecision (3) << proj->residualError ());
     }
   }
-  BOOST_MESSAGE ("Success ratio: " << success << "/" << configs.size ()
+  BOOST_TEST_MESSAGE ("Success ratio: " << success << "/" << configs.size ()
       << " = " << (double)success / (double)configs.size());
 
   std::vector <bool> mask (hrp2->numberDof(), true);
@@ -134,7 +134,7 @@ BOOST_AUTO_TEST_CASE (constraints)
   for (std::size_t i = 0; i < configs.size(); ++i) {
     Configuration_t q = *configs[i];
     if (proj->apply (q)) {
-      BOOST_MESSAGE ("================================================");
+      BOOST_TEST_MESSAGE ("================================================");
       success++;
       Configuration_t q0 = q;
       if (projOpt->optimize (q, 1)) {
@@ -143,7 +143,7 @@ BOOST_AUTO_TEST_CASE (constraints)
         value_type q0_hs = (q0-half_sitting).norm();
         value_type  q_hs = (q -half_sitting).norm();
         BOOST_CHECK_MESSAGE (q_hs < q0_hs, "Configuration did not get closer");
-        BOOST_MESSAGE (std::fixed << std::setprecision (3)
+        BOOST_TEST_MESSAGE (std::fixed << std::setprecision (3)
             <<   "|q -q0| = " << q_q0
             << ", |q -hs| = " << q_hs
             << ", |q0-hs| = " << q0_hs);
@@ -154,9 +154,9 @@ BOOST_AUTO_TEST_CASE (constraints)
       }
     }
   }
-  BOOST_MESSAGE ("Success ratio: " << success << "/" << configs.size ()
+  BOOST_TEST_MESSAGE ("Success ratio: " << success << "/" << configs.size ()
       << " = " << (double)success / (double)configs.size());
-  BOOST_MESSAGE ("Optim success ratio: " << successOpt << "/" << success
+  BOOST_TEST_MESSAGE ("Optim success ratio: " << successOpt << "/" << success
       << " = " << (double)successOpt / (double)success);
 }
 
@@ -171,7 +171,7 @@ BOOST_AUTO_TEST_CASE (static_stability)
   StaticStability::Contacts_t cs;
   StaticStability::Contact_t c;
 
-  c.joint1 = JointPtr_t();              
+  c.joint1 = JointPtr_t();
   c.point1 = vector3_t (0,-feetD-feetS,0);
   c.normal1 = vector3_t (0,0,1);
 
@@ -180,7 +180,7 @@ BOOST_AUTO_TEST_CASE (static_stability)
   c.normal2 = vector3_t (0,0,1);
   cs.push_back (c);
 
-  c.joint1 = JointPtr_t();              
+  c.joint1 = JointPtr_t();
   c.point1 = vector3_t (0,-feetD+feetS,0);
   c.normal1 = vector3_t (0,0,1);
 
@@ -189,7 +189,7 @@ BOOST_AUTO_TEST_CASE (static_stability)
   c.normal2 = vector3_t (0,0,1);
   cs.push_back (c);
 
-  c.joint1 = JointPtr_t();              
+  c.joint1 = JointPtr_t();
   c.point1 = vector3_t (0,+feetD+feetS,0);
   c.normal1 = vector3_t (0,0,1);
 
@@ -198,7 +198,7 @@ BOOST_AUTO_TEST_CASE (static_stability)
   c.normal2 = vector3_t (0,0,1);
   cs.push_back (c);
 
-  c.joint1 = JointPtr_t();              
+  c.joint1 = JointPtr_t();
   c.point1 = vector3_t (0,+feetD-feetS,0);
   c.normal1 = vector3_t (0,0,1);
 
@@ -231,7 +231,7 @@ BOOST_AUTO_TEST_CASE (static_stability)
   vector_t dq (hrp2->numberDof ()); dq.setZero ();
 
   matrix_t jacobian;
-  BOOST_MESSAGE ("Number of check: " << NUMBER_JACOBIAN_CALCULUS * hrp2->numberDof ());
+  BOOST_TEST_MESSAGE ("Number of check: " << NUMBER_JACOBIAN_CALCULUS * hrp2->numberDof ());
   for (DFs::iterator fit = functions.begin(); fit != functions.end(); ++fit) {
     DF& f = *(fit->second);
     LiegroupElement value1 (f.outputSpace ());
