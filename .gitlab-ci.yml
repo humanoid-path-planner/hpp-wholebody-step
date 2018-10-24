@@ -30,6 +30,7 @@ robotpkg-hpp-wholebody-step-16.04-release:
 robotpkg-hpp-wholebody-step-18.04-release:
   <<: *robotpkg-hpp-wholebody-step
   image: eur0c.laas.fr:5000/humanoid-path-planner/hpp-wholebody-step/hpp-wholebody-step:18.04
+  allow_failure: true
 
 doc-coverage:
   <<: *robotpkg-hpp-wholebody-step
