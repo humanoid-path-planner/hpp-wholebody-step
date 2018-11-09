@@ -45,6 +45,9 @@ using hpp::pinocchio::ConfigurationPtr_t;
 using hpp::pinocchio::CenterOfMassComputation;
 using hpp::pinocchio::CenterOfMassComputationPtr_t;
 using hpp::pinocchio::Device;
+using hpp::pinocchio::Computation_t;
+using hpp::pinocchio::JOINT_POSITION;
+using hpp::pinocchio::JACOBIAN;
 using hpp::core::ConfigProjector;
 using hpp::core::ConfigProjectorPtr_t;
 using hpp::constraints::Implicit;
@@ -65,8 +68,7 @@ HumanoidRobotPtr_t createRobot ()
   HumanoidRobotPtr_t robot = HPP_DYNAMIC_PTR_CAST
     (HumanoidRobot, hpp::pinocchio::unittest::makeDevice
      (hpp::pinocchio::unittest::HumanoidRomeo));
-  robot->controlComputation((Device::Computation_t)
-                            (Device::JOINT_POSITION | Device::JACOBIAN));
+  robot->controlComputation((Computation_t) (JOINT_POSITION | JACOBIAN));
   for (std::size_t i = 0; i < 3; ++i) {
     robot->rootJoint ()->lowerBound (i, -1);
     robot->rootJoint ()->upperBound (i, +1);

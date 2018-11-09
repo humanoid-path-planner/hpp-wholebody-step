@@ -300,12 +300,12 @@ namespace hpp {
 
       robot_->currentConfiguration (path->initial ());
       robot_->computeForwardKinematics ();
-      comComp->compute (pinocchio::Device::COM);
+      comComp->compute (hpp::pinocchio::COM);
       vector_t comInitPos(2); comInitPos << comComp->com()[0], comComp->com()[1];
       value_type comH = comComp->com () [2];
       robot_->currentConfiguration (path->end ());
       robot_->computeForwardKinematics ();
-      comComp->compute (pinocchio::Device::COM);
+      comComp->compute (hpp::pinocchio::COM);
       vector_t comEndPos(2); comEndPos << comComp->com()[0], comComp->com()[1];
       vector_t comVelocity (vector_t::Zero (2));
 

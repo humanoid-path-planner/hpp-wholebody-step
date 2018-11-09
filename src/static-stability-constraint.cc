@@ -82,7 +82,7 @@ namespace hpp {
       std::vector <ImplicitPtr_t> result;
       robot->currentConfiguration (configuration);
       robot->computeForwardKinematics ();
-      comc->compute (Device::COM);
+      comc->compute (hpp::pinocchio::COM);
       JointPtr_t joint1 = leftAnkle;
       JointPtr_t joint2 = rightAnkle;
       const Transform3f& M1 = joint1->currentTransformation ();
@@ -160,7 +160,7 @@ namespace hpp {
 	std::vector <ImplicitPtr_t> result;
       robot->currentConfiguration (configuration);
       robot->computeForwardKinematics ();
-      comc->compute (Device::COM);
+      comc->compute (hpp::pinocchio::COM);
       JointPtr_t joint1 = leftAnkle;
       JointPtr_t joint2 = rightAnkle;
       const Transform3f& M1 = joint1->currentTransformation ();
@@ -197,7 +197,7 @@ namespace hpp {
       ImplicitPtr_t nm;
       robot->currentConfiguration (configuration);
       robot->computeForwardKinematics ();
-      comc->compute (Device::COM);
+      comc->compute (hpp::pinocchio::COM);
       JointPtr_t joint1 = leftAnkle;
       JointPtr_t joint2 = rightAnkle;
       const Transform3f& M1 = joint1->currentTransformation ();
