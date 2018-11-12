@@ -33,7 +33,7 @@
 namespace hpp {
   namespace wholebodyStep {
     namespace {
-      using se3::SE3;
+      using pinocchio::SE3;
       static vector3_t zero (vector3_t::Zero());
       static matrix3_t I3 (matrix3_t::Identity());
       static SE3 MId (SE3::Identity());
