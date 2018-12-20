@@ -18,13 +18,14 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
 SET(CUSTOM_HEADER_DIR "hpp/wholebody-step")
 INCLUDE(cmake/base.cmake)
+INCLUDE(cmake/hpp.cmake)
 INCLUDE(cmake/boost.cmake)
 INCLUDE(cmake/test.cmake)
 
 SET(PROJECT_NAME hpp-wholebody-step)
 SET(PROJECT_DESCRIPTION
   "Path planning for humanoid robot by sliding on the groud.")
-SET(PROJECT_URL "https://github.com/laas/hpp-wholebody-step")
+SET(PROJECT_URL "https://github.com/humanoid-path-planner/hpp-wholebody-step")
 
 # Add a cache variable to allow not compiling and running tests
 SET(RUN_TESTS TRUE CACHE BOOL "compile and run unit tests")
@@ -45,7 +46,7 @@ IF (HPP_DEBUG)
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHPP_DEBUG")
 ENDIF()
 
-SETUP_PROJECT()
+SETUP_HPP_PROJECT()
 
 IF(RUN_TESTS)
   SET(BOOST_COMPONENTS "unit_test_framework")
@@ -65,4 +66,4 @@ ENDIF(RUN_TESTS)
 # Add dependency toward hpp-wholebody-step library in pkg-config file.
 PKG_CONFIG_APPEND_LIBS("hpp-wholebody-step")
 
-SETUP_PROJECT_FINALIZE()
+SETUP_HPP_PROJECT_FINALIZE()
