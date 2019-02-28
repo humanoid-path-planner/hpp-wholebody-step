@@ -16,7 +16,7 @@
 
 INCLUDE(${HPP_CORE_CMAKE_PLUGIN})
 
-ADD_PLUGIN(wholebody-step
+HPP_ADD_PLUGIN(wholebody-step
   SOURCES wholebody-step.cc
   LINK_DEPENDENCIES ${PROJECT_NAME}
   PKG_CONFIG_DEPENDENCIES hpp-core hpp-walkgen)
