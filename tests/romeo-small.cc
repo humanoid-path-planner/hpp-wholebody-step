@@ -53,7 +53,7 @@ using hpp::core::ConfigProjectorPtr_t;
 using hpp::constraints::Implicit;
 using hpp::constraints::ImplicitPtr_t;
 using hpp::core::configurationShooter::Uniform;
-using hpp::core::configurationShooter::UniformPtr_t;
+using hpp::core::ConfigurationShooterPtr_t;
 using hpp::constraints::StaticStability;
 using hpp::constraints::StaticStabilityPtr_t;
 using hpp::constraints::RelativeCom;
@@ -96,7 +96,7 @@ BOOST_AUTO_TEST_CASE (constraints)
   for (std::size_t i = 0; i < ncs.size (); ++i) {
     proj->add (ncs[i], hpp::core::segments_t (0), 0);
   }
-  UniformPtr_t shooter =
+  ConfigurationShooterPtr_t shooter =
     Uniform::create (hrp2);
 
   /// Compute a vector of configurations
@@ -225,7 +225,7 @@ BOOST_AUTO_TEST_CASE (static_stability)
         RelativeCom::create (hrp2, com, hrp2->leftAnkle(), vector3_t (0,0,0.64))
         ));
 
-  UniformPtr_t shooter = Uniform::create (hrp2);
+  ConfigurationShooterPtr_t shooter = Uniform::create (hrp2);
 
   ConfigurationPtr_t q1, q2 = shooter->shoot();
   vector_t dvalue, error;
