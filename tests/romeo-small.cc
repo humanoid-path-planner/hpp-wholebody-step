@@ -28,6 +28,7 @@
 #include "hpp/constraints/configuration-constraint.hh"
 #include <hpp/constraints/implicit.hh>
 #include "hpp/constraints/static-stability.hh"
+#include "hpp/constraints/solver/by-substitution.hh"
 #include "hpp/constraints/relative-com.hh"
 #include "hpp/core/configuration-shooter/uniform.hh"
 #include "hpp/core/config-projector.hh"
@@ -52,6 +53,10 @@ using hpp::core::ConfigProjector;
 using hpp::core::ConfigProjectorPtr_t;
 using hpp::constraints::Implicit;
 using hpp::constraints::ImplicitPtr_t;
+using hpp::constraints::solver::BySubstitution;
+using hpp::constraints::solver::lineSearch::FixedSequence;
+using hpp::constraints::solver::lineSearch::Constant;
+using hpp::constraints::solver::lineSearch::Backtracking;
 using hpp::core::configurationShooter::Uniform;
 using hpp::core::ConfigurationShooterPtr_t;
 using hpp::constraints::StaticStability;
@@ -62,6 +67,7 @@ const static size_t NUMBER_JACOBIAN_CALCULUS = 20;
 const static double HESSIAN_MAXIMUM_COEF = 1000.;
 const static double DQ_MAX = 1e-4;
 const static size_t MAX_NB_ERROR = 5;
+bool enable_warn_message = false;
 
 HumanoidRobotPtr_t createRobot ()
 {
@@ -76,7 +82,8 @@ HumanoidRobotPtr_t createRobot ()
   return robot;
 }
 
-BOOST_AUTO_TEST_CASE (constraints)
+template <typename LineSearchFactory>
+void constraints_check (LineSearchFactory factory)
 {
   HumanoidRobotPtr_t hrp2 = createRobot ();
   Configuration_t half_sitting (hrp2->configSize ());
@@ -84,7 +91,6 @@ BOOST_AUTO_TEST_CASE (constraints)
     -0.3490658, 0, 0, 0, -0.3490658, 0.6981317, -0.3490658, 0, 0, 1.5, 0.6,
     -0.5, -1.05, -0.4, -0.3, -0.2, 0, 0, 0, 0, 1.5, -0.6, 0.5, 1.05, -0.4,
     -0.3, -0.2;
-  BOOST_TEST_MESSAGE (half_sitting.transpose ());
 
   CenterOfMassComputationPtr_t com = CenterOfMassComputation::create (hrp2);
   com->add (hrp2->rootJoint ());
@@ -106,12 +112,13 @@ BOOST_AUTO_TEST_CASE (constraints)
     configs[i] = shooter->shoot ();
 
   /// Compute ratio of success
+  const BySubstitution& solver = proj->solver();
   std::size_t success = 0;
   for (std::size_t i = 0; i < configs.size(); ++i) {
     Configuration_t q = *configs[i];
-    if (proj->apply (q)) { success++; }
+    if (solver.solve (q, factory())) { success++; }
     else {
-      BOOST_WARN_MESSAGE (false, "Projection failed " << std::scientific <<
+      BOOST_WARN_MESSAGE (!enable_warn_message, "Projection failed " << std::scientific <<
           std::setprecision (3) << proj->residualError ());
     }
   }
@@ -135,8 +142,7 @@ BOOST_AUTO_TEST_CASE (constraints)
   std::size_t successOpt = 0;
   for (std::size_t i = 0; i < configs.size(); ++i) {
     Configuration_t q = *configs[i];
-    if (proj->apply (q)) {
-      BOOST_TEST_MESSAGE ("================================================");
+    if (solver.solve (q, factory())) {
       success++;
       Configuration_t q0 = q;
       if (projOpt->optimize (q, 1)) {
@@ -145,21 +151,56 @@ BOOST_AUTO_TEST_CASE (constraints)
         value_type q0_hs = (q0-half_sitting).norm();
         value_type  q_hs = (q -half_sitting).norm();
         BOOST_CHECK_MESSAGE (q_hs < q0_hs, "Configuration did not get closer");
-        BOOST_TEST_MESSAGE (std::fixed << std::setprecision (3)
+        BOOST_WARN_MESSAGE (!enable_warn_message, std::fixed << std::setprecision (3)
             <<   "|q -q0| = " << q_q0
             << ", |q -hs| = " << q_hs
             << ", |q0-hs| = " << q0_hs);
       }
       else {
-        BOOST_WARN_MESSAGE (false, "Optim error " << std::scientific <<
+        BOOST_WARN_MESSAGE (!enable_warn_message, "Optim error " << std::scientific <<
           std::setprecision (3) << projOpt->residualError ());
       }
     }
   }
-  BOOST_TEST_MESSAGE ("Success ratio: " << success << "/" << configs.size ()
+  BOOST_TEST_MESSAGE ("Success ratio (with cost): " << success << "/" << configs.size ()
       << " = " << (double)success / (double)configs.size());
   BOOST_TEST_MESSAGE ("Optim success ratio: " << successOpt << "/" << success
       << " = " << (double)successOpt / (double)success);
+}
+
+template <typename LineSeachType>
+struct LineSearchFactoryTpl
+{
+  typedef LineSeachType type;
+  type operator() () { return type (to_copy); }
+
+  LineSearchFactoryTpl (const type& t) : to_copy (t) {}
+
+  type to_copy;
+};
+
+BOOST_AUTO_TEST_CASE (constraints)
+{
+  const char* header = "=========================================\n";
+
+  Constant constant;
+  BOOST_TEST_MESSAGE (header << "Constant steps.");
+  constraints_check (LineSearchFactoryTpl<Constant> (constant));
+
+  FixedSequence fixedSequence;
+
+  fixedSequence.alphaMax = 0.95;
+  BOOST_TEST_MESSAGE (header << "Fixed sequence: alphaMax " << fixedSequence.alphaMax << " [default]");
+  constraints_check (LineSearchFactoryTpl<FixedSequence> (fixedSequence));
+
+  fixedSequence.alphaMax = 1.;
+  BOOST_TEST_MESSAGE (header << "Fixed sequence: alphaMax " << fixedSequence.alphaMax);
+  constraints_check (LineSearchFactoryTpl<FixedSequence> (fixedSequence));
+
+  Backtracking backtracking;
+  BOOST_TEST_MESSAGE (header << "Backtracking line search");
+  constraints_check (LineSearchFactoryTpl<Backtracking> (backtracking));
+
 }
 
 BOOST_AUTO_TEST_CASE (static_stability)
