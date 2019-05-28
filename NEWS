@@ -1,4 +1,7 @@
                                                                 -*- outline -*-
+New in 4.6.0
+* Update to API change in hpp-core
+* In test, make comparison between line search algorithms
 
 New in 4.1, 2018-05-19
 * Dependency to hrp2_14_description has been removed. Tests are run with
