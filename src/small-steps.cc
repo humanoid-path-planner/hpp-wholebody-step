@@ -199,7 +199,7 @@ namespace hpp {
       hppDout (info, "s = " << s);
       value_type length = path->length ();
       bool finished = false;
-      bool stepLeft;
+      bool stepLeft (true);
       FootPrint rfp = footPrintAtParam (path, s, true);
       FootPrint lfp = footPrintAtParam (path, s, false);
       value_type halfStepLength = .5*maxStepLength_;
@@ -712,7 +712,9 @@ namespace hpp {
             // ratioIDS  = newIT / newDST
             const value_type newDST = interval / ( ratioIDS + 4 * ratioSSDS + 3 );
             const value_type newSST = newDST * ratioSSDS;
+#ifndef NDEBUG
             const value_type newIT  = newDST * ratioIDS;
+#endif
             const std::size_t i_start = nb_time - 9;
             for (std::size_t i = 0; i < 3; ++i) {
               times[i_start + 2*i + 1] = times[i_start + 2*i    ] + newSST;
