@@ -1,4 +1,6 @@
                                                                 -*- outline -*-
+* Remove call to deprecated methods in hpp-constraints.
+
 New in 4.6.0
 * Update to API change in hpp-core
 * In test, make comparison between line search algorithms

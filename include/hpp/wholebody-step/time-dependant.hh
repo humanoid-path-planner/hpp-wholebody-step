@@ -36,7 +36,7 @@ namespace hpp {
     {
       void rhsAbscissa (const value_type s) const
       {
-        (*rhsFunc_) (eq_->nonConstRightHandSide(), s);
+        (*rhsFunc_) (eq_->rightHandSide(), s);
       }
 
       TimeDependant (const ImplicitPtr_t& eq,
