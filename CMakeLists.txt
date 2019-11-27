@@ -14,33 +14,31 @@
 # hpp-wholebody-step. If not, see <http://www.gnu.org/licenses/>.
 
 # Requires at least CMake 2.6 to configure the package.
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+
+SET(PROJECT_NAME hpp-wholebody-step)
+SET(PROJECT_DESCRIPTION "Path planning for humanoid robot by sliding on the groud.")
 
 SET(CUSTOM_HEADER_DIR "hpp/wholebody-step")
-INCLUDE(cmake/base.cmake)
 INCLUDE(cmake/hpp.cmake)
 INCLUDE(cmake/boost.cmake)
 INCLUDE(cmake/test.cmake)
-
-SET(PROJECT_NAME hpp-wholebody-step)
-SET(PROJECT_DESCRIPTION
-  "Path planning for humanoid robot by sliding on the groud.")
-SET(PROJECT_URL "https://github.com/humanoid-path-planner/hpp-wholebody-step")
 
 # Add a cache variable to allow not compiling and running tests
 SET(RUN_TESTS TRUE CACHE BOOL "compile and run unit tests")
 
 SET(${PROJECT_NAME}_HEADERS
-  include/hpp/wholebody-step/fwd.hh
-  include/hpp/wholebody-step/small-steps.hh
-  include/hpp/wholebody-step/time-dependant.hh
-  include/hpp/wholebody-step/time-dependant-path.hh
-  include/hpp/wholebody-step/static-stability-constraint.hh
+  include/${CUSTOM_HEADER_DIR}/fwd.hh
+  include/${CUSTOM_HEADER_DIR}/small-steps.hh
+  include/${CUSTOM_HEADER_DIR}/time-dependant.hh
+  include/${CUSTOM_HEADER_DIR}/time-dependant-path.hh
+  include/${CUSTOM_HEADER_DIR}/static-stability-constraint.hh
 )
 
 SET(CXX_DISABLE_WERROR 1)
 
-SETUP_HPP_PROJECT()
+COMPUTE_PROJECT_ARGS(PROJECT_ARGS LANGUAGES CXX)
+PROJECT(${PROJECT_NAME} ${PROJECT_ARGS})
 
 LIST(APPEND PKG_CONFIG_ADDITIONAL_VARIABLES cmake_plugin)
 
@@ -62,5 +60,3 @@ ENDIF(RUN_TESTS)
 
 # Add dependency toward hpp-wholebody-step library in pkg-config file.
 PKG_CONFIG_APPEND_LIBS("hpp-wholebody-step")
-
-SETUP_HPP_PROJECT_FINALIZE()
