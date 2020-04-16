@@ -1,6 +1,6 @@
-# Copyright 2015 CNRS-LAAS
+# Copyright 2015, 2020 CNRS-LAAS
 #
-# Author: Joseph Mirabel
+# Authors: Joseph Mirabel, Guilhem Saurel
 #
 # This file is part of hpp-wholebody-setp
 # hpp-wholebody-step is free software: you can redistribute it and/or modify
@@ -15,12 +15,8 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with hpp-wholebody-setp  If not, see <http://www.gnu.org/licenses/>.
 
-INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
-
 # Make Boost.Test generates the main function in test cases.
 ADD_DEFINITIONS(-DBOOST_TEST_DYN_LINK -DBOOST_TEST_MAIN)
 
 ADD_UNIT_TEST(romeo-small romeo-small.cc)
 TARGET_LINK_LIBRARIES(romeo-small ${Boost_LIBRARIES} ${PROJECT_NAME})
-PKG_CONFIG_USE_DEPENDENCY(romeo-small hpp-core)
-PKG_CONFIG_USE_DEPENDENCY(romeo-small hpp-walkgen)

@@ -1,5 +1,6 @@
-# Copyright (c) 2019, Joseph Mirabel
+# Copyright (c) 2019, 2020, CNRS
 # Authors: Joseph Mirabel (joseph.mirabel@laas.fr)
+# Authors: Guilhem Saurel (guilhem.saurel@laas.fr)
 #
 # This file is part of hpp-wholebody-step.
 # hpp-wholebody-step is free software: you can redistribute it
@@ -18,5 +19,4 @@ INCLUDE(${HPP_CORE_CMAKE_PLUGIN})
 
 HPP_ADD_PLUGIN(wholebody-step
   SOURCES wholebody-step.cc
-  LINK_DEPENDENCIES ${PROJECT_NAME}
-  PKG_CONFIG_DEPENDENCIES hpp-core hpp-walkgen)
+  LINK_DEPENDENCIES ${PROJECT_NAME})
