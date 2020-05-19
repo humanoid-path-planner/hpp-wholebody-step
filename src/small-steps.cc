@@ -114,8 +114,7 @@ namespace hpp {
           // Position only
           func = PointInJointFunction::create
             ("point-hand-walkgen", robot, PointInJoint::create (joint, vector3_t (0,0,0)));
-          eq = constraints::Implicit::create (func,
-              constraints::ComparisonTypes_t(3, constraints::Equality));
+          eq = constraints::Implicit::create (func, 3 * constraints::Equality);
           TD = TimeDependant (eq, RightHandSideFunctorPtr_t
               (new ReproducePath (func, path, param))
               );
@@ -429,8 +428,6 @@ namespace hpp {
       assert (robot_);
       const TimeToParameterMap_t& TTP = param.pairs_;
 
-      constraints::ComparisonTypes_t equals (3, constraints::Equality);
-
       // Create the time varying equation for COM
       pinocchio::CenterOfMassComputationPtr_t comComp = pinocchio::CenterOfMassComputation::
         create (robot_);
@@ -438,21 +435,22 @@ namespace hpp {
       PointComFunctionPtr_t comFunc = PointComFunction::create ("COM-walkgen",
           robot_, PointCom::create (comComp));
       constraints::ImplicitPtr_t comEq = constraints::Implicit::create
-        (comFunc, equals);
+        (comFunc, 3 * constraints::Equality);
       TimeDependant comEqTD (comEq, RightHandSideFunctorPtr_t (new CubicBSplineToCom (com, comHeight)));
 
       // Create an time varying equation for each foot.
-      equals.resize (6, constraints::Equality);
       JointFrameFunctionPtr_t leftFunc = JointFrameFunction::create ("left-foot-walkgen",
           robot_, JointFrame::create (robot_->leftAnkle ()));
-      constraints::ImplicitPtr_t leftEq = constraints::Implicit::create (leftFunc, equals);
+      constraints::ImplicitPtr_t leftEq = constraints::Implicit::create
+        (leftFunc, 6 * constraints::Equality);
       TimeDependant leftEqTD (leftEq, RightHandSideFunctorPtr_t
           (new FootPathToFootPos (pg_->leftFoot (), pg_->leftFootTrajectory (), ankleShift))
           );
 
       JointFrameFunctionPtr_t rightFunc = JointFrameFunction::create ("right-foot-walkgen",
           robot_, JointFrame::create (robot_->rightAnkle ()));
-      constraints::ImplicitPtr_t rightEq = constraints::Implicit::create (rightFunc, equals);
+      constraints::ImplicitPtr_t rightEq = constraints::Implicit::create
+        (rightFunc, 6 * constraints::Equality);
       TimeDependant rightEqTD (rightEq, RightHandSideFunctorPtr_t
           (new FootPathToFootPos (pg_->rightFoot (), pg_->rightFootTrajectory (), ankleShift))
           );
