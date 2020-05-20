@@ -29,42 +29,6 @@ namespace hpp {
     extern const std::string STABILITY_CONTEXT;
     typedef constraints::Implicit Implicit;
     typedef constraints::ImplicitPtr_t ImplicitPtr_t;
-    /// Create quasi-static stability constraints
-    /// \param robot the robot,
-    /// \param comc a hpp::pinocchio::CenterOfMassComputation that handle
-    ///        COM computations.
-    /// \param leftAnkle left ankle joint,
-    /// \param rightAnkle right ankle joint,
-    /// \param configuration the configuration of the robot satisfying
-    ///        the constraint,
-    ///
-    /// The constraints make the feet of the robot slide on a horizontal ground
-    /// and the center of mass project at a constant position with respect to
-    /// the feet. Five constraints are returned:
-    /// \li relative position of the center of mass (as defined with comc)
-    ///     in the left ankle frame (dimension 3),
-    /// \li relative orientation of the feet (dimension 3),
-    /// \li relative position of the feet (dimension 3),
-    /// \li orientation of the left foot (dimension 2),
-    /// \li position of the left foot (dimension 1).
-    ///
-    /// All constraints are returned along with the
-    /// hpp::core::ComparisonType::createDefault()
-    std::vector <ImplicitPtr_t> createSlidingStabilityConstraint
-    (const DevicePtr_t& robot, const CenterOfMassComputationPtr_t& comc,
-     const JointPtr_t& leftAnkle, const JointPtr_t& rightAnkle,
-     ConfigurationIn_t configuration) HPP_WHOLEBODY_STEP_DEPRECATED;
-
-    /// Create quasi-static stability constraints
-    /// The center of mass takes into account all the joints of the robot.
-    /// \param robot, leftAnkle, rightAnkle, configuration
-    ///        see createSlidingStabilityConstraint(const DevicePtr_t&,
-    ///         const JointPtr_t&, const JointPtr_t&, ConfigurationIn_t)
-    std::vector <ImplicitPtr_t> createSlidingStabilityConstraint
-    (const DevicePtr_t& robot, const JointPtr_t& leftAnkle, 
-     const JointPtr_t& rightAnkle, ConfigurationIn_t configuration)
-      HPP_WHOLEBODY_STEP_DEPRECATED;
-
     /// Create quasi-static stability complementary constraints
     /// \param robot the robot,
     /// \param comc a hpp::pinocchio::CenterOfMassComputation that handle

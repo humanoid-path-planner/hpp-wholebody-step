@@ -63,18 +63,7 @@ namespace hpp {
 
     const std::string STABILITY_CONTEXT = "stability";
 
-    std::vector <ImplicitPtr_t> createSlidingStabilityConstraint
-    (const DevicePtr_t& robot, const JointPtr_t& leftAnkle,
-     const JointPtr_t& rightAnkle, ConfigurationIn_t configuration)
-    {
-      CenterOfMassComputationPtr_t comc =
-        CenterOfMassComputation::create (robot);
-      comc->add (robot->rootJoint ());
-      return createSlidingStabilityConstraint
-        (robot, comc, leftAnkle, rightAnkle, configuration);
-    }
-
-    std::vector <ImplicitPtr_t> createSlidingStabilityConstraint
+    static std::vector <ImplicitPtr_t> createSlidingStabilityConstraint
     (const DevicePtr_t& robot, const CenterOfMassComputationPtr_t& comc,
      const JointPtr_t& leftAnkle, const JointPtr_t& rightAnkle,
      ConfigurationIn_t configuration)
