@@ -55,6 +55,7 @@ using hpp::core::ConfigProjector;
 using hpp::core::ConfigProjectorPtr_t;
 using hpp::constraints::Implicit;
 using hpp::constraints::ImplicitPtr_t;
+using hpp::constraints::Equality;
 using hpp::constraints::solver::BySubstitution;
 using hpp::constraints::solver::lineSearch::FixedSequence;
 using hpp::constraints::solver::lineSearch::Constant;
@@ -131,8 +132,7 @@ void constraints_check (LineSearchFactory factory)
   for (std::size_t i = 0; i < 6; i++) mask[i] = false;
   ImplicitPtr_t cc = Implicit::create
     (hpp::constraints::ConfigurationConstraint::create
-     ("Optimization constraint", hrp2, half_sitting, mask)
-    );
+     ("Optimization constraint", hrp2, half_sitting, mask), 1 * Equality);
   cc->function().context ("optimization");
 
   ConfigProjectorPtr_t projOpt = HPP_STATIC_PTR_CAST (ConfigProjector,

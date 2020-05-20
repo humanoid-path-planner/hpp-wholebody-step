@@ -92,12 +92,14 @@ namespace hpp {
       matrix3_t R1T (M1.rotation ().transpose());
       vector3_t xloc = R1T * (x - M1.translation ());
       result.push_back (Implicit::create (RelativeCom::create
-            (robot, comc, joint1, xloc)));
+                        (robot, comc, joint1, xloc),
+                                          3 * constraints::EqualToZero));
       result.back ()->function ().context (STABILITY_CONTEXT);
       // Relative orientation of the feet
       matrix3_t reference = R1T * M2.rotation ();
       result.push_back(Implicit::create (RelativeOrientation::create
-		       ("Feet relative orientation", robot, joint1, joint2, toSE3(reference))));
+		       ("Feet relative orientation", robot, joint1, joint2,
+                        toSE3(reference)), 3 * constraints::EqualToZero));
       result.back ()->function ().context (STABILITY_CONTEXT);
       // Relative position of the feet
       vector3_t local1; local1.setZero ();
@@ -107,17 +109,21 @@ namespace hpp {
       matrix3_t R2T (M2.rotation ().transpose ());
       vector3_t local2 = R2T * (global1 - M2.translation ());
       result.push_back (Implicit::create (RelativePosition::create
-			("Feet relative position", robot, joint1, joint2, toSE3(local1), toSE3(local2))));
+			("Feet relative position", robot, joint1, joint2,
+                         toSE3(local1), toSE3(local2)),
+                                          3 * constraints::EqualToZero));
       result.back ()->function ().context (STABILITY_CONTEXT);
       // Orientation of the left foot
       result.push_back (Implicit::create (Orientation::create
             ("Left foot rx/ry orientation", robot, joint1, MId,
-             list_of (true)(true)(false).convert_to_container<BoolVector_t>())));
+             list_of (true)(true)(false).convert_to_container<BoolVector_t>()),
+                                          2*constraints::EqualToZero));
       result.back ()->function ().context (STABILITY_CONTEXT);
       // Position of the left foot
       result.push_back (Implicit::create (Position::create
-            ("Left foot z position", robot, joint1, MId, toSE3(M1.translation ()),
-             list_of (false)(false)(true).convert_to_container<BoolVector_t>())));
+        ("Left foot z position", robot, joint1, MId, toSE3(M1.translation ()),
+         list_of (false)(false)(true).convert_to_container<BoolVector_t>()),
+                                          1 * constraints::EqualToZero));
       result.back ()->function ().context (STABILITY_CONTEXT);
       return result;
     }
@@ -136,13 +142,13 @@ namespace hpp {
       result.push_back (Implicit::create (Orientation::create
             ("Left foot rz orientation", robot, joint1, MId,
              list_of (false)(false)(true).convert_to_container<BoolVector_t>()),
-          ComparisonTypes_t(1, constraints::Equality)));
+                                          1 * constraints::EqualToZero));
       result.back ()->function ().context (STABILITY_CONTEXT);
       // Position of the left foot
       result.push_back (Implicit::create (Position::create
             ("Left foot xy position", robot, joint1, MId, toSE3(M1.translation()),
              list_of (true)(true)(false).convert_to_container<BoolVector_t>()),
-          ComparisonTypes_t(2, constraints::Equality)));
+                                          2 * constraints::EqualToZero));
       result.back ()->function ().context (STABILITY_CONTEXT);
       return result;
     }
@@ -170,17 +176,20 @@ namespace hpp {
       matrix3_t R1T (M1.rotation ().transpose ());
       vector3_t xloc = R1T * (x - M1.translation ());
       result.push_back (Implicit::create (RelativeCom::create
-            (robot, comc, joint1, xloc)));
+                                          (robot, comc, joint1, xloc),
+                                          3 * constraints::EqualToZero));
       result.back ()->function ().context (STABILITY_CONTEXT);
       // pose of the left foot
       result.push_back (Implicit::create
 			(constraints::Transformation::create
-			 ("Left foot pose", robot, joint1, M1)));
+			 ("Left foot pose", robot, joint1, M1),
+                         6 * constraints::EqualToZero));
       result.back ()->function ().context (STABILITY_CONTEXT);
       // pose of the right foot
       result.push_back (Implicit::create
 			(constraints::Transformation::create
-			 ("Right foot pose", robot, joint2, M2)));
+			 ("Right foot pose", robot, joint2, M2),
+                         6 * constraints::EqualToZero));
       result.back ()->function ().context (STABILITY_CONTEXT);
       return result;
       }
@@ -205,9 +214,8 @@ namespace hpp {
       // matrix3_t R1T (M1.rotation ().transpose ());
       const vector3_t& x = comc->com ();
       // position of center of mass in left ankle frame
-      ComparisonTypes_t comps = list_of
-        (constraints::EqualToZero) (constraints::EqualToZero)
-        (constraints::Superior)    (constraints::Inferior);
+      ComparisonTypes_t comps(2 * constraints::EqualToZero
+                            << constraints::Superior << constraints::Inferior);
       nm = Implicit::create (
           ComBetweenFeet::create ("ComBetweenFeet", robot, comc,
             joint1, joint2, zero, zero, robot->rootJoint (), x,
@@ -223,13 +231,14 @@ namespace hpp {
       // Pose of the right foot
       nm = Implicit::create
 	(constraints::Transformation::create
-	 ("Right foot pose", robot, joint2, M2, mask));
+	 ("Right foot pose", robot, joint2, M2, mask),
+         3 * constraints::EqualToZero);
       result.push_back(nm);
       result.back ()->function ().context (STABILITY_CONTEXT);
       // Pose of the left foot
       nm = Implicit::create
 	(constraints::Transformation::create
-	 ("Right pose", robot, joint1, M1, mask));
+	 ("Right pose", robot, joint1, M1, mask), 3 * constraints::EqualToZero);
       result.push_back(nm);
       result.back ()->function ().context (STABILITY_CONTEXT);
       return result;
