@@ -1,4 +1,7 @@
                                                                 -*- outline -*-
+New in 4.10.0
+* Remove deprecated methods.
+* Add package/xml.
 * Remove call to deprecated methods in hpp-constraints.
 
 New in 4.6.0
