@@ -19,4 +19,4 @@
 ADD_DEFINITIONS(-DBOOST_TEST_DYN_LINK -DBOOST_TEST_MAIN)
 
 ADD_UNIT_TEST(romeo-small romeo-small.cc)
-TARGET_LINK_LIBRARIES(romeo-small ${Boost_LIBRARIES} ${PROJECT_NAME})
+TARGET_LINK_LIBRARIES(romeo-small Boost::unit_test_framework ${PROJECT_NAME})
