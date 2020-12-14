@@ -45,7 +45,7 @@ namespace hpp {
     typedef constraints::SymbolicFunction<PointCom> PointComFunction;
     typedef constraints::SymbolicFunction<PointCom>::Ptr_t PointComFunctionPtr_t;
 
-    typedef core::Problem Problem;
+    typedef core::ProblemConstPtr_t ProblemConstPtr_t;
     typedef core::PathOptimizerPtr_t PathOptimizerPtr_t;
 
     typedef core::Path Path;

@@ -56,7 +56,7 @@ namespace hpp {
       /// \param delegate path planner that will solve the initial path planning
       ///        problem for the sliding robot.
       /// \note the roadmap of this planner and of the delegate are the same.
-      static SmallStepsPtr_t create (const Problem& problem);
+      static SmallStepsPtr_t create (const ProblemConstPtr_t& problem);
       /// Call implementation of delegate path planner
       virtual PathVectorPtr_t optimize (const PathVectorPtr_t& path);
 
@@ -79,7 +79,7 @@ namespace hpp {
 
     protected:
       /// Constructor with roadmap
-      SmallSteps (const Problem& problem);
+      SmallSteps (const ProblemConstPtr_t& problem);
       /// Store weak pointer to itself
       void init (const SmallStepsWkPtr_t& weak);
     private:

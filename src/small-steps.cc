@@ -167,7 +167,7 @@ namespace hpp {
       pairs_ [t] = value;
     }
 
-    SmallStepsPtr_t SmallSteps::create (const Problem& problem)
+    SmallStepsPtr_t SmallSteps::create (const ProblemConstPtr_t& problem)
     {
       SmallSteps* ptr = new SmallSteps (problem);
       SmallStepsPtr_t shPtr (ptr);
@@ -175,7 +175,7 @@ namespace hpp {
       return shPtr;
     }
 
-    SmallSteps::SmallSteps (const Problem& problem) :
+    SmallSteps::SmallSteps (const ProblemConstPtr_t& problem) :
       core::PathOptimizer (problem), robot_ (), minStepLength_ (0.2),
       maxStepLength_ (0.2), defaultStepHeight_ (0.05),
       defaultDoubleSupportTime_ (0.1), defaultSingleSupportTime_ (0.6),
@@ -286,7 +286,7 @@ namespace hpp {
     PathVectorPtr_t SmallSteps::optimize (const PathVectorPtr_t& path)
     {
       // Check that robot is a humanoid robot
-      robot_ = HPP_DYNAMIC_PTR_CAST (HumanoidRobot, problem ().robot ());
+      robot_ = HPP_DYNAMIC_PTR_CAST (HumanoidRobot, problem()->robot ());
       if (!robot_) {
 	throw std::runtime_error ("Robot is not of type humanoid");
       }
@@ -358,7 +358,7 @@ namespace hpp {
         if (!valid) {
           lastProjFailed = opted;
         } else {
-          core::PathValidationPtr_t pv = problem().pathValidation ();
+          core::PathValidationPtr_t pv = problem()->pathValidation ();
           PathPtr_t unused;
           core::PathValidationReportPtr_t report;
           valid = pv->validate (opted, false, unused, report);
