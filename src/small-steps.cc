@@ -124,7 +124,7 @@ namespace hpp {
         {
           if (!model.active) return;
           if (model.optional) {
-            proj->add (eq, core::segments_t(0), 1);
+            proj->add (eq, 1);
             proj->lastIsOptional (true);
           } else {
             proj->add (eq);
