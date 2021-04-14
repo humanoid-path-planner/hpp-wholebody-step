@@ -82,9 +82,9 @@ namespace hpp {
     typedef walkgen::CubicBSplinePtr_t CubicBSplinePtr_t;
 
     HPP_PREDEF_CLASS (SmallSteps);
-    typedef boost::shared_ptr <SmallSteps> SmallStepsPtr_t;
+    typedef std::shared_ptr <SmallSteps> SmallStepsPtr_t;
     HPP_PREDEF_CLASS (TimeDependantPath);
-    typedef boost::shared_ptr <TimeDependantPath> TimeDependantPathPtr_t;
+    typedef std::shared_ptr <TimeDependantPath> TimeDependantPathPtr_t;
   } // namespace wholebodyStep
 } // namespace hpp
 #endif // HPP_WHOLEBODY_STEP_FWD_HH
